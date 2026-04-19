@@ -1,4 +1,8 @@
+![Keyseal logo](docs/assets/keyseal-logo.png)
+
 # Keyseal
+
+[![CI](https://github.com/Barkway-app/keyseal/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Barkway-app/keyseal/actions/workflows/ci.yml)
 
 > **Not production ready** — this project is under active development and not yet suitable for production use.
 >
