@@ -1,0 +1,22 @@
+version: 1
+
+repository:
+  root: .
+  encrypted_extension: .enc.yaml
+
+sops:
+  binary: sops
+  age_key_file: ~/.config/sops/age/keys.txt
+
+defaults:
+  output_format: dotenv
+  output_dir: /run/secrets
+  file_mode: "0600"
+
+validation:
+  require_values: true
+  key_pattern: '^[A-Z0-9_]+$'
+
+profiles:
+  default:
+    renders: []

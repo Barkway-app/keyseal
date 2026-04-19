@@ -1,0 +1,30 @@
+# Binaries
+/bin/
+/keyseal
+/dist/
+*.exe
+*.out
+
+# Go
+.cache/
+coverage.out
+*.test
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+.codex
+.claude
+
+# Temp and local outputs
+tmp/
+runtime/
+*.env.local
+*.rendered
+
+# Local secret render targets
+/run/secrets/

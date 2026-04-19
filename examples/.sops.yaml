@@ -1,0 +1,6 @@
+creation_rules:
+  - path_regex: production/.*\.enc\.yaml$
+    age: age1REPLACE_ME,age1RECOVERY_REPLACE_ME
+
+  - path_regex: staging/.*\.enc\.yaml$
+    age: age1REPLACE_ME,age1RECOVERY_REPLACE_ME
