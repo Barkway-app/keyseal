@@ -10,13 +10,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Barkway-app/keyseal/internal/buildinfo"
 	"github.com/Barkway-app/keyseal/internal/config"
 	"github.com/spf13/cobra"
 )
-
-// Version is the user-facing CLI version string. Release builds can override it
-// at link time with -ldflags.
-var Version = "dev"
 
 // Execute runs the Keyseal root command.
 func Execute() error {
@@ -24,6 +21,8 @@ func Execute() error {
 }
 
 func newRootCommand() *cobra.Command {
+	var showVersion bool
+
 	cmd := &cobra.Command{
 		Use:   "keyseal",
 		Short: "Small CLI for SOPS + age repo-backed secrets workflows",
@@ -35,12 +34,20 @@ func newRootCommand() *cobra.Command {
 			"  keyseal edit production/platform/app\n" +
 			"  keyseal render production/platform/app --stdout\n" +
 			"  keyseal exec production/platform/app -- env | grep APP_\n" +
-			"  keyseal doctor",
-		Version:       Version,
+			"  keyseal doctor\n" +
+			"  keyseal --version\n" +
+			"  keyseal version --short",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if showVersion {
+				fmt.Fprintln(cmd.OutOrStdout(), buildinfo.OneLine())
+				return nil
+			}
+			return cmd.Help()
+		},
 	}
-	cmd.SetVersionTemplate("{{.Version}}\n")
+	cmd.Flags().BoolVar(&showVersion, "version", false, "Print the Keyseal version and exit")
 
 	cmd.AddCommand(
 		newInitCommand(),
@@ -49,6 +56,7 @@ func newRootCommand() *cobra.Command {
 		newRenderCommand(),
 		newExecCommand(),
 		newDoctorCommand(),
+		newVersionCommand(),
 	)
 	return cmd
 }

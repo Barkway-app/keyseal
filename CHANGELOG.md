@@ -4,6 +4,14 @@ All notable changes to Keyseal will be documented in this file.
 
 The format is intentionally lightweight for now and optimized for early public release tags.
 
+## Unreleased
+
+Highlights:
+- `keyseal add` now scaffolds via a secure temp file, runs `sops encrypt`, and atomically writes only encrypted output to the final `.enc.yaml` path by default
+- `keyseal add` no longer exposes a plaintext scaffolding mode
+- `keyseal --version` and `keyseal version` now report stamped build metadata
+- tagged `v*` GitHub releases now publish platform archives and SHA256 checksums
+
 ## v0.1.0
 
 Initial public release.

@@ -9,6 +9,7 @@ import (
 	"github.com/Barkway-app/keyseal/internal/fsutil"
 	"github.com/Barkway-app/keyseal/internal/repo"
 	"github.com/Barkway-app/keyseal/internal/schema"
+	"github.com/Barkway-app/keyseal/internal/sopsutil"
 	"github.com/Barkway-app/keyseal/internal/templates"
 	"github.com/spf13/cobra"
 )
@@ -20,10 +21,11 @@ func newAddCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "add <logical-name>",
-		Short: "Create a plaintext starter env document",
+		Short: "Create a starter env document",
 		Args:  cobra.ExactArgs(1),
 		Long: "Create a starter secret document at <logical-name>.enc.yaml.\n" +
-			"For v0.1.0, the file is created as plaintext YAML at a .enc.yaml path until you encrypt it with `keyseal edit`.",
+			"Keyseal uses a non-interactive SOPS flow that encrypts the starter document before writing the final file.\n" +
+			"No plaintext starter content is written to the final .enc.yaml path.",
 		Example: "  keyseal add production/platform/app\n" +
 			"  keyseal add production/platform/app --template laravel\n" +
 			"  keyseal edit production/platform/app",
@@ -61,10 +63,18 @@ func newAddCommand() *cobra.Command {
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return fmt.Errorf("create parent directory: %w", err)
 			}
-			if err := fsutil.AtomicWriteFile(target, body, 0o600, force); err != nil {
+
+			if err := fsutil.CheckWritableFilePath(target, force); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "created plaintext starter %s\nnext: run `keyseal edit %s` to encrypt it with SOPS\n", target, logical)
+			ciphertext, err := sopsutil.EncryptFile(cfg.SOPS.Binary, body, target)
+			if err != nil {
+				return fmt.Errorf("encrypt starter document with %q: %w", cfg.SOPS.Binary, err)
+			}
+			if err := fsutil.AtomicWriteFile(target, ciphertext, 0o600, force); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "created encrypted starter %s\nnext: run `keyseal edit %s` to review or update it with SOPS\n", target, logical)
 			return nil
 		},
 	}

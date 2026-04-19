@@ -1,0 +1,34 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Verify repository
+        run: make check
+
+      - name: Build release artifacts
+        run: make dist VERSION=${GITHUB_REF_NAME} COMMIT=${GITHUB_SHA} DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*_checksums.txt

@@ -44,17 +44,11 @@ func ValidateOutputPath(path string) error {
 	return nil
 }
 
-// AtomicWriteFile writes plaintext output via a temp file in the destination
-// directory and then renames it into place.
-//
-// Creating the temp file in the same directory keeps the final rename atomic on
-// normal filesystems and avoids cross-device surprises.
-func AtomicWriteFile(path string, data []byte, mode os.FileMode, force bool) error {
+// CheckWritableFilePath validates the output path and applies the shared
+// overwrite check used before writing files.
+func CheckWritableFilePath(path string, force bool) error {
 	if err := ValidateOutputPath(path); err != nil {
 		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("create parent directory: %w", err)
 	}
 	if !force {
 		if _, err := os.Stat(path); err == nil {
@@ -62,6 +56,21 @@ func AtomicWriteFile(path string, data []byte, mode os.FileMode, force bool) err
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("check output file: %w", err)
 		}
+	}
+	return nil
+}
+
+// AtomicWriteFile writes plaintext output via a temp file in the destination
+// directory and then renames it into place.
+//
+// Creating the temp file in the same directory keeps the final rename atomic on
+// normal filesystems and avoids cross-device surprises.
+func AtomicWriteFile(path string, data []byte, mode os.FileMode, force bool) error {
+	if err := CheckWritableFilePath(path, force); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create parent directory: %w", err)
 	}
 	temp, err := os.CreateTemp(filepath.Dir(path), ".keyseal-*")
 	if err != nil {

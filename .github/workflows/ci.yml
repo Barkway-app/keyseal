@@ -24,4 +24,4 @@ jobs:
         run: make test
 
       - name: Build
-        run: make build VERSION=ci
+        run: make build VERSION=ci COMMIT=${GITHUB_SHA} DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")

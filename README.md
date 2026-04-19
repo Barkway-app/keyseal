@@ -6,7 +6,7 @@
 
 > **Not production ready** — this project is under active development and not yet suitable for production use.
 >
-> **Sharp edge:** `keyseal add` currently writes a plaintext starter document to a `.enc.yaml` path. You must run `keyseal edit <logical-name>` immediately after scaffolding to encrypt it with SOPS.
+> **Default flow:** `keyseal add` scaffolds and encrypts a new secret document immediately, without writing plaintext starter content to the final `.enc.yaml` path.
 
 Keyseal is a small Go CLI that standardizes encrypted file workflows around `sops`, `age`, and Git.
 
@@ -53,17 +53,19 @@ make build
 make tidy
 make check
 make build
+./bin/keyseal --version
 ./bin/keyseal --help
 ```
 
 ## Command overview
 
 - `keyseal init` bootstraps a repository layout, `keyseal.yaml`, and `.sops.yaml`
-- `keyseal add <logical-name>` creates a plaintext starter env secret document at the final `.enc.yaml` path
+- `keyseal add <logical-name>` creates and encrypts a starter env secret document at the final `.enc.yaml` path
 - `keyseal edit <logical-name>` opens the target file with `sops`
 - `keyseal render <logical-name...>` decrypts, merges, and renders secret values
 - `keyseal exec <logical-name...> -- <command...>` runs a child process with merged env vars
 - `keyseal doctor` validates config, repo structure, file naming, SOPS availability, and decrypted documents
+- `keyseal version` reports version, commit, and build date metadata
 
 ## What Keyseal is not
 
@@ -172,11 +174,7 @@ keyseal init --force
 keyseal add production/platform/app --template laravel
 ```
 
-For `v0.1.0`, `add` writes a valid starter YAML document directly to `production/platform/app.enc.yaml`. The next step is to encrypt and edit it with SOPS:
-
-```bash
-keyseal edit production/platform/app
-```
+This recommended flow is non-interactive: Keyseal writes starter YAML to a secure temp file, runs `sops encrypt`, and atomically writes only encrypted output to `production/platform/app.enc.yaml`.
 
 ### Edit with SOPS
 
@@ -223,9 +221,28 @@ Checks include:
 - `.sops.yaml` exists
 - `sops` can be located
 - encrypted file naming matches the expected logical mapping
-- plaintext starter files created by `keyseal add` are flagged until they are encrypted with `keyseal edit`
+- plaintext starter files left behind by older Keyseal versions are flagged until they are encrypted with `keyseal edit`
 - decrypted documents validate against the env schema when the configured `sops` binary is available
 - unsafe file modes and output paths are surfaced
+
+## Version reporting
+
+```bash
+keyseal --version
+keyseal version
+keyseal version --short
+```
+
+Release builds stamp version, commit, and build date metadata via Go linker flags. Local builds default to `dev`, `unknown`, and `unknown` unless you pass `VERSION`, `COMMIT`, and `DATE`.
+When Git metadata is available, local builds default to the latest `v*` tag and the short current commit, so `keyseal --version` reports output like `keyseal v0.1.0 (abc1234)`.
+
+## Release artifacts
+
+```bash
+make dist VERSION=v0.2.0 COMMIT=$(git rev-parse --short HEAD) DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+```
+
+`make dist` builds tar.gz archives for the supported release platforms, includes `README.md` and `LICENSE` in each archive, and writes a single SHA256 checksums file to `dist/`. Tagged `v*` pushes publish those artifacts as GitHub Releases.
 
 ## Templates
 
@@ -252,6 +269,7 @@ GitHub Actions runs:
 - `gofmt -l` verification
 - `go test ./...`
 - `go build ./cmd/keyseal`
+- tagged `v*` release builds that publish archives and checksums
 
 ## Built by Barkway
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -61,6 +62,46 @@ func EditFile(binary, path string) error {
 		return fmt.Errorf("run sops editor for %s: %w", path, err)
 	}
 	return nil
+}
+
+// EncryptFile encrypts plaintext by writing it to a secure temp file and
+// invoking `sops encrypt --filename-override <target> <tempfile>`.
+//
+// The caller owns the final write path so encrypted mode can keep plaintext out
+// of the destination `.enc.yaml` file entirely.
+func EncryptFile(binary string, plaintext []byte, filenameOverride string) ([]byte, error) {
+	if _, err := LookPath(binary); err != nil {
+		return nil, err
+	}
+
+	temp, err := os.CreateTemp("", "keyseal-plaintext-*.yaml")
+	if err != nil {
+		return nil, fmt.Errorf("create temp file: %w", err)
+	}
+	tempPath := temp.Name()
+	defer os.Remove(tempPath)
+
+	if err := temp.Chmod(0o600); err != nil {
+		temp.Close()
+		return nil, fmt.Errorf("chmod temp file: %w", err)
+	}
+	if _, err := temp.Write(plaintext); err != nil {
+		temp.Close()
+		return nil, fmt.Errorf("write temp file: %w", err)
+	}
+	if err := temp.Close(); err != nil {
+		return nil, fmt.Errorf("close temp file: %w", err)
+	}
+
+	cmd := exec.Command(binary, "encrypt", "--filename-override", filenameOverride, tempPath)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("encrypt %s with sops: %s", filepath.Base(filenameOverride), sanitizeOutput(stderr.Bytes(), stdout.Bytes()))
+	}
+	return stdout.Bytes(), nil
 }
 
 func sanitizeOutput(primary, fallback []byte) string {
