@@ -64,6 +64,30 @@ func EditFile(binary, path string) error {
 	return nil
 }
 
+// Version returns the first non-empty line from `sops --version`.
+func Version(binary string) (string, error) {
+	if _, err := LookPath(binary); err != nil {
+		return "", err
+	}
+	cmd := exec.Command(binary, "--version")
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("run sops --version: %s", sanitizeOutput(stderr.Bytes(), stdout.Bytes()))
+	}
+	for _, candidate := range []string{stdout.String(), stderr.String()} {
+		for _, line := range strings.Split(candidate, "\n") {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				return line, nil
+			}
+		}
+	}
+	return "", nil
+}
+
 // EncryptFile encrypts plaintext by writing it to a secure temp file and
 // invoking `sops encrypt --filename-override <target> <tempfile>`.
 //

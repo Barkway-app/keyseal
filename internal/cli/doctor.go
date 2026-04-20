@@ -9,35 +9,46 @@ import (
 )
 
 func newDoctorCommand() *cobra.Command {
-	return &cobra.Command{
+	var jsonOutput bool
+
+	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Validate repository and config health",
-		Long: "Validate keyseal.yaml, .sops.yaml, SOPS availability, logical path mapping,\n" +
-			"and decrypted env document shape without exposing secret values in normal output.",
-		Example: "  keyseal doctor",
+		Long: "Validate keyseal.yaml, .sops.yaml readiness, placeholder recipients, SOPS availability,\n" +
+			"encrypted file consistency, plaintext mistakes, and decrypted env document shape without exposing secret values.\n" +
+			"Use --json for machine-readable output in CI or scripts.",
+		Example: "  keyseal doctor\n" +
+			"  keyseal doctor --json",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cwd, err := os.Getwd()
 			if err != nil {
 				return err
 			}
+
 			result, err := doctor.Run(cwd)
 			if err != nil {
 				return err
 			}
-			for _, note := range result.Notes {
-				fmt.Fprintf(cmd.OutOrStdout(), "note: %s\n", note)
+
+			if jsonOutput {
+				payload, err := result.RenderJSON()
+				if err != nil {
+					return fmt.Errorf("marshal doctor json: %w", err)
+				}
+				if _, err := cmd.OutOrStdout().Write(append(payload, '\n')); err != nil {
+					return err
+				}
+			} else {
+				fmt.Fprint(cmd.OutOrStdout(), result.RenderText())
 			}
-			for _, warning := range result.Warnings {
-				fmt.Fprintf(cmd.OutOrStdout(), "warning: %s\n", warning)
+
+			if result.HasFailures() {
+				return commandExitError{code: 1}
 			}
-			for _, failure := range result.Errors {
-				fmt.Fprintf(cmd.ErrOrStderr(), "error: %s\n", failure)
-			}
-			if result.HasErrors() {
-				return fmt.Errorf("doctor found %d error(s)", len(result.Errors))
-			}
-			fmt.Fprintln(cmd.OutOrStdout(), "doctor checks passed")
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Emit structured JSON results for CI or scripts")
+	return cmd
 }

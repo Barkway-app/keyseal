@@ -1,4 +1,4 @@
-![Keyseal logo](docs/assets/keyseal-logo.png)
+![Keyseal logo](https://github.com/Barkway-app/keyseal/wiki/keyseal-logo.png)
 
 # Keyseal
 
@@ -64,7 +64,7 @@ make build
 - `keyseal edit <logical-name>` opens the target file with `sops`
 - `keyseal render <logical-name...>` decrypts, merges, and renders secret values
 - `keyseal exec <logical-name...> -- <command...>` runs a child process with merged env vars
-- `keyseal doctor` validates config, repo structure, file naming, SOPS availability, and decrypted documents
+- `keyseal doctor` validates config sanity, `.sops.yaml` readiness, placeholder recipients, SOPS availability, plaintext mistakes, and decrypted document shape
 - `keyseal version` reports version, commit, and build date metadata
 
 ## What Keyseal is not
@@ -214,16 +214,22 @@ The current process environment is inherited first, then secret values override 
 
 ```bash
 keyseal doctor
+keyseal doctor --json
 ```
 
 Checks include:
-- `keyseal.yaml` exists and parses
-- `.sops.yaml` exists
-- `sops` can be located
-- encrypted file naming matches the expected logical mapping
+- `keyseal.yaml` exists, parses, and has sane values
+- `.sops.yaml` exists, parses, and contains usable creation rules
+- placeholder SOPS recipients like `age1REPLACE_ME` are flagged
+- the configured `sops` binary can be resolved and executed
+- the detected SOPS version is reported when available
+- encrypted file naming still matches the expected logical mapping
 - plaintext starter files left behind by older Keyseal versions are flagged until they are encrypted with `keyseal edit`
 - decrypted documents validate against the env schema when the configured `sops` binary is available
-- unsafe file modes and output paths are surfaced
+- duplicate env keys are surfaced
+- unsafe file modes, risky output paths, and obvious generated repo artifacts are surfaced
+
+`doctor --json` emits the same checks in a structured JSON format for CI or scripts.
 
 ## Version reporting
 
@@ -286,17 +292,3 @@ This package is licensed under `GPL-3.0-only` (GNU General Public License v3.0 o
 If you distribute this package, modifications, or derivative works, review the GPLv3 obligations first to make sure your usage and distribution model remain compliant.
 
 See [LICENSE](./LICENSE) for the full license text.
-
-## Roadmap notes
-
-Intentionally simplified for v1 RC:
-- `add` creates starter YAML directly at the final `.enc.yaml` path before the first SOPS edit
-- only `kind: env` is supported
-- rendering is limited to `dotenv`, `json`, and `yaml`
-- no inline secret editor, no daemon, no API, no hosted backend
-
-Recommended next steps for v0.2:
-- optional `add --encrypt` flow that shells out to `sops` immediately
-- profile-driven render presets from `keyseal.yaml`
-- richer doctor reporting and duplicate-key diagnostics across merge sets
-- shell completion and installation packages
