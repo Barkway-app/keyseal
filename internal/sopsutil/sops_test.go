@@ -29,7 +29,7 @@ func TestDecryptFileWithStubBinary(t *testing.T) {
 		t.Fatalf("write secret: %v", err)
 	}
 
-	out, err := sopsutil.DecryptFile("fake-sops", secretPath)
+	out, err := sopsutil.DecryptFile("fake-sops", "", secretPath)
 	if err != nil {
 		t.Fatalf("DecryptFile returned error: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestDecryptFileDoesNotMixWarningStderrIntoPlaintext(t *testing.T) {
 		t.Fatalf("write secret: %v", err)
 	}
 
-	out, err := sopsutil.DecryptFile("fake-sops", secretPath)
+	out, err := sopsutil.DecryptFile("fake-sops", "", secretPath)
 	if err != nil {
 		t.Fatalf("DecryptFile returned error: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestEncryptFileWithStubBinary(t *testing.T) {
 	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	out, err := sopsutil.EncryptFile("fake-sops", []byte("version: 1\nkind: env\nname: production/platform/app\n"), "production/platform/app.enc.yaml")
+	out, err := sopsutil.EncryptFile("fake-sops", "", []byte("version: 1\nkind: env\nname: production/platform/app\n"), "production/platform/app.enc.yaml")
 	if err != nil {
 		t.Fatalf("EncryptFile returned error: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestEncryptFileCleansUpTempPlaintext(t *testing.T) {
 	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	if _, err := sopsutil.EncryptFile("fake-sops", []byte("version: 1\n"), "production/platform/app.enc.yaml"); err != nil {
+	if _, err := sopsutil.EncryptFile("fake-sops", "", []byte("version: 1\n"), "production/platform/app.enc.yaml"); err != nil {
 		t.Fatalf("EncryptFile returned error: %v", err)
 	}
 
@@ -122,5 +122,62 @@ func TestEncryptFileCleansUpTempPlaintext(t *testing.T) {
 	}
 	if _, err := os.Stat(tempPath); !os.IsNotExist(err) {
 		t.Fatalf("expected temp plaintext file to be removed, stat err = %v", err)
+	}
+}
+
+func TestDecryptFileUsesConfiguredAgeKeyFileWhenEnvUnset(t *testing.T) {
+	dir := t.TempDir()
+	binDir := filepath.Join(dir, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+
+	scriptPath := filepath.Join(binDir, "fake-sops")
+	script := "#!/bin/sh\nprintf '%s' \"$SOPS_AGE_KEY_FILE\"\n"
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake sops: %v", err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	secretPath := filepath.Join(dir, "app.enc.yaml")
+	if err := os.WriteFile(secretPath, []byte("ignored"), 0o600); err != nil {
+		t.Fatalf("write secret: %v", err)
+	}
+
+	out, err := sopsutil.DecryptFile("fake-sops", "/tmp/test-age-key.txt", secretPath)
+	if err != nil {
+		t.Fatalf("DecryptFile returned error: %v", err)
+	}
+	if string(out) != "/tmp/test-age-key.txt" {
+		t.Fatalf("expected configured age key file to be passed through, got %q", string(out))
+	}
+}
+
+func TestDecryptFilePrefersExistingAgeKeyEnv(t *testing.T) {
+	dir := t.TempDir()
+	binDir := filepath.Join(dir, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+
+	scriptPath := filepath.Join(binDir, "fake-sops")
+	script := "#!/bin/sh\nprintf '%s' \"$SOPS_AGE_KEY_FILE\"\n"
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake sops: %v", err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("SOPS_AGE_KEY_FILE", "/tmp/from-env.txt")
+
+	secretPath := filepath.Join(dir, "app.enc.yaml")
+	if err := os.WriteFile(secretPath, []byte("ignored"), 0o600); err != nil {
+		t.Fatalf("write secret: %v", err)
+	}
+
+	out, err := sopsutil.DecryptFile("fake-sops", "/tmp/from-config.txt", secretPath)
+	if err != nil {
+		t.Fatalf("DecryptFile returned error: %v", err)
+	}
+	if string(out) != "/tmp/from-env.txt" {
+		t.Fatalf("expected env override to win, got %q", string(out))
 	}
 }

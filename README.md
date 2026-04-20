@@ -3,6 +3,9 @@
 # Keyseal
 
 [![CI](https://github.com/Barkway-app/keyseal/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Barkway-app/keyseal/actions/workflows/ci.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/Barkway-app/keyseal)](https://github.com/Barkway-app/keyseal/releases)
+[![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](./LICENSE)
+[![Go Version](https://img.shields.io/badge/go-1.22%2B-00ADD8)](https://go.dev/)
 
 > **Not production ready** — this project is under active development and not yet suitable for production use.
 >
@@ -14,6 +17,8 @@ It helps teams:
 - keep encrypted secret files in a repository
 - scaffold new secret documents
 - open encrypted files in `sops`
+- inspect Git status, diffs, and file history by logical name
+- commit and roll back Keyseal-managed changes without staging the whole repo
 - render decrypted values into runtime formats
 - run commands with decrypted environment variables injected
 - validate repository layout and config health
@@ -26,6 +31,7 @@ Keyseal shells out to the installed `sops` binary for editing and decryption. It
 
 SOPS already solves encryption and editing well. Keyseal stays one layer above that and makes a repo-backed workflow more predictable:
 - consistent file naming and layout
+- Git-aware workflows around the encrypted files that already live in the repo
 - small config with strong defaults
 - repeatable render and exec flows
 - clear validation for common mistakes
@@ -36,6 +42,30 @@ SOPS already solves encryption and editing well. Keyseal stays one layer above t
 - `sops` installed locally and available in `PATH`
 - age recipients configured in `.sops.yaml`
 
+## Installation
+
+Pre-built binaries and Linux packages are available on the [GitHub Releases](https://github.com/Barkway-app/keyseal/releases) page.
+
+Each release includes:
+- tar.gz archives for Linux (amd64, arm64) and macOS (amd64, arm64)
+- `.deb` packages for Linux amd64 and arm64
+- `.rpm` packages for Linux amd64 and arm64
+- SHA256 checksums for all artifacts
+
+**Linux (Debian/Ubuntu):**
+```bash
+sudo dpkg -i keyseal_<version>_amd64.deb
+```
+
+**Linux (RHEL/Fedora/SUSE):**
+```bash
+sudo rpm -i keyseal-<version>-1.x86_64.rpm
+```
+
+**Other platforms:** Extract the binary from the appropriate tar.gz archive and place it somewhere in your `PATH`.
+
+Verify downloads against the `checksums.txt` file included in each release.
+
 ## Quick start
 
 ```bash
@@ -43,9 +73,17 @@ make build
 ./bin/keyseal init
 ./bin/keyseal add production/platform/app --template laravel
 ./bin/keyseal edit production/platform/app
+./bin/keyseal status
+./bin/keyseal commit -m "Add production app secret"
 ./bin/keyseal render production/platform/app --stdout
 ./bin/keyseal doctor
 ```
+
+For a fuller walkthrough, see the wiki:
+- [Quick Start](https://github.com/Barkway-app/keyseal/wiki/Quick-Start)
+- [Concepts](https://github.com/Barkway-app/keyseal/wiki/Concepts)
+- [Command Reference](https://github.com/Barkway-app/keyseal/wiki/Command-Reference)
+- [Configuration Reference](https://github.com/Barkway-app/keyseal/wiki/Configuration-Reference)
 
 ## Build
 
@@ -60,12 +98,21 @@ make build
 ## Command overview
 
 - `keyseal init` bootstraps a repository layout, `keyseal.yaml`, and `.sops.yaml`
-- `keyseal add <logical-name>` creates and encrypts a starter env secret document at the final `.enc.yaml` path
-- `keyseal edit <logical-name>` opens the target file with `sops`
+- `keyseal add <logical-name>` creates and encrypts a starter env secret document at the final `.enc.yaml` path, with optional immediate Git commit support
+- `keyseal edit <logical-name>` opens the target file with `sops`, with optional immediate Git commit support
+- `keyseal status [logical-name]` shows Git status for Keyseal-managed files, optionally narrowed to one secret
+- `keyseal diff <logical-name>` shows `git diff` for one secret file
+- `keyseal history <logical-name>` shows file-scoped Git history for one secret file, with optional `--oneline` output
+- `keyseal commit` stages current Keyseal-managed changes and creates a Git commit
+- `keyseal rollback <logical-name> --to <commit>` restores one secret file from Git history
 - `keyseal render <logical-name...>` decrypts, merges, and renders secret values
 - `keyseal exec <logical-name...> -- <command...>` runs a child process with merged env vars
 - `keyseal doctor` validates config sanity, `.sops.yaml` readiness, placeholder recipients, SOPS availability, plaintext mistakes, and decrypted document shape
 - `keyseal version` reports version, commit, and build date metadata
+
+Detailed flags, examples, and behavior notes live in the wiki:
+- [Command Reference](https://github.com/Barkway-app/keyseal/wiki/Command-Reference)
+- [Troubleshooting](https://github.com/Barkway-app/keyseal/wiki/Troubleshooting)
 
 ## What Keyseal is not
 
@@ -75,24 +122,7 @@ make build
 - not a daemon or web UI
 - not a Kubernetes controller
 
-## Default repository structure
-
-```text
-keyseal.yaml
-.sops.yaml
-
-production/
-  platform/
-  infra/
-  tenants/
-
-staging/
-  platform/
-  infra/
-  tenants/
-```
-
-## `keyseal.yaml`
+## Example config
 
 ```yaml
 version: 1
@@ -104,6 +134,9 @@ repository:
 sops:
   binary: sops
   age_key_file: ~/.config/sops/age/keys.txt
+
+git:
+  auto_commit: false
 
 defaults:
   output_format: dotenv
@@ -119,117 +152,36 @@ profiles:
     renders: []
 ```
 
-## Secret document schema
-
-Keyseal v1 RC supports one secret kind: `kind: env`.
-
-```yaml
-version: 1
-kind: env
-name: production/platform/app
-description: Core Laravel app secrets for production
-values:
-  APP_NAME: Barkway
-  APP_ENV: production
-  APP_KEY: base64:xxxxx
-  APP_DEBUG: "false"
-  DB_HOST: 10.0.0.10
-  DB_PORT: "3306"
-  DB_DATABASE: barkway
-  DB_USERNAME: barkway_app
-  DB_PASSWORD: super-secret
-```
-
-Rules:
-- `version`, `kind`, `name`, and `values` are required
-- env keys must match `^[A-Z0-9_]+$`
-- encrypted files always end with `.enc.yaml`
-
-## `.sops.yaml`
-
-Keyseal generates a starter file with placeholder recipients you must replace:
-
-```yaml
-creation_rules:
-  - path_regex: production/.*\.enc\.yaml$
-    age: age1REPLACE_ME,age1RECOVERY_REPLACE_ME
-
-  - path_regex: staging/.*\.enc\.yaml$
-    age: age1REPLACE_ME,age1RECOVERY_REPLACE_ME
-```
+For full schema and config details, see:
+- [Configuration Reference](https://github.com/Barkway-app/keyseal/wiki/Configuration-Reference)
+- [Secret File Format](https://github.com/Barkway-app/keyseal/wiki/Secret-File-Format)
+- [Repository Layout](https://github.com/Barkway-app/keyseal/wiki/Repository-Layout)
 
 ## Usage
 
-### Initialize a repo
-
-```bash
-keyseal init
-keyseal init --dry-run
-keyseal init --force
-```
-
-### Add a secret document
-
 ```bash
 keyseal add production/platform/app --template laravel
-```
-
-This recommended flow is non-interactive: Keyseal writes starter YAML to a secure temp file, runs `sops encrypt`, and atomically writes only encrypted output to `production/platform/app.enc.yaml`.
-
-### Edit with SOPS
-
-```bash
 keyseal edit production/platform/app
-```
-
-Keyseal does not reimplement SOPS. It resolves the logical name to a file path and runs `sops <file>`.
-
-### Render decrypted output
-
-Render to stdout:
-
-```bash
-keyseal render production/platform/app --format dotenv --stdout
-```
-
-`render` requires exactly one of `--stdout` or `--out`. If you use `--stdout`, decrypted values are printed directly to the terminal.
-
-Render multiple files to a target file with later files overriding earlier files:
-
-```bash
-keyseal render staging/platform/app staging/platform/stripe \
-  --format json \
-  --out ./runtime/app-secrets.json
-```
-
-### Execute a command with injected env vars
-
-```bash
-keyseal exec production/platform/app production/platform/stripe -- php artisan queue:work
-```
-
-The current process environment is inherited first, then secret values override matching keys for the child process only.
-
-### Run diagnostics
-
-```bash
+keyseal status production/platform/app
+keyseal history production/platform/app --oneline
+keyseal commit -m "Update production app secret"
+keyseal render production/platform/app --stdout --format json
+keyseal exec production/platform/app -- php artisan migrate
+keyseal rollback production/platform/app --to <commit> --dry-run
 keyseal doctor
-keyseal doctor --json
 ```
 
-Checks include:
-- `keyseal.yaml` exists, parses, and has sane values
-- `.sops.yaml` exists, parses, and contains usable creation rules
-- placeholder SOPS recipients like `age1REPLACE_ME` are flagged
-- the configured `sops` binary can be resolved and executed
-- the detected SOPS version is reported when available
-- encrypted file naming still matches the expected logical mapping
-- plaintext starter files left behind by older Keyseal versions are flagged until they are encrypted with `keyseal edit`
-- decrypted documents validate against the env schema when the configured `sops` binary is available
-- duplicate env keys are surfaced
-- unsafe file modes, risky output paths, and obvious generated repo artifacts are surfaced
+Key workflow details:
+- `-m, --message` implies commit on mutating commands
+- `git.auto_commit` is off by default
+- `sops.age_key_file` is used as the default age key path unless `SOPS_AGE_KEY_FILE` is already set
+- `keyseal commit` stages only Keyseal-managed files, not the whole repo
+- `rollback` restores the encrypted file from Git history, while `--dry-run` previews safely without modifying the working tree
 
-`doctor --json` emits the same checks in a structured JSON format for CI or scripts.
+For exact command behavior and more examples, see:
+- [Command Reference](https://github.com/Barkway-app/keyseal/wiki/Command-Reference)
+- [Configuration Reference](https://github.com/Barkway-app/keyseal/wiki/Configuration-Reference)
+- [Troubleshooting](https://github.com/Barkway-app/keyseal/wiki/Troubleshooting)
 
 ## Version reporting
 
@@ -248,17 +200,15 @@ When Git metadata is available, local builds default to the latest `v*` tag and 
 make dist VERSION=v0.2.0 COMMIT=$(git rev-parse --short HEAD) DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 ```
 
-`make dist` builds tar.gz archives for the supported release platforms, includes `README.md` and `LICENSE` in each archive, and writes a single SHA256 checksums file to `dist/`. Tagged `v*` pushes publish those artifacts as GitHub Releases.
+`make dist` builds tar.gz archives for the supported release platforms, generates `.deb` and `.rpm` packages for Linux (amd64, arm64), and writes a single SHA256 checksums file covering all artifacts to `dist/`.
 
-## Templates
+Linux packages require [nfpm](https://nfpm.goreleaser.com/install/) to be installed. To build only the Linux packages without archives:
 
-Built-in starter templates:
-- `laravel`
-- `stripe`
-- `mail`
-- `mysql-app`
+```bash
+make packages VERSION=v0.2.0
+```
 
-These templates are intentionally small and hardcoded for v1 RC.
+Tagged `v*` pushes publish all artifacts — archives, packages, and checksums — as GitHub Releases.
 
 ## Development
 
@@ -269,13 +219,18 @@ make test
 make build
 ```
 
+For contributor-oriented detail, see:
+- [Contributing](https://github.com/Barkway-app/keyseal/wiki/Contributing)
+- [Build and Release](https://github.com/Barkway-app/keyseal/wiki/Build-and-Release)
+- [Templates](https://github.com/Barkway-app/keyseal/wiki/Templates)
+
 ## CI
 
 GitHub Actions runs:
 - `gofmt -l` verification
 - `go test ./...`
 - `go build ./cmd/keyseal`
-- tagged `v*` release builds that publish archives and checksums
+- tagged `v*` release builds that publish tar.gz archives, `.deb` packages, `.rpm` packages, and checksums
 
 ## Built by Barkway
 

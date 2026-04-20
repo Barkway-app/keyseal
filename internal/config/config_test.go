@@ -26,6 +26,9 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	if cfg.Defaults.OutputFormat != "dotenv" {
 		t.Fatalf("expected default output format, got %q", cfg.Defaults.OutputFormat)
 	}
+	if cfg.Git.AutoCommit {
+		t.Fatal("expected git.auto_commit to default to false")
+	}
 	if cfg.Validation.KeyPattern != "^[A-Z0-9_]+$" {
 		t.Fatalf("expected default key pattern, got %q", cfg.Validation.KeyPattern)
 	}

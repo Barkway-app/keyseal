@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -43,7 +44,7 @@ func TestAddDefaultWritesEncryptedOutputOnly(t *testing.T) {
 func TestAddDefaultMissingSOPSDoesNotCreateFinalFile(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeTestConfig(t, repoRoot)
-	t.Setenv("PATH", repoRoot)
+	t.Setenv("PATH", gitOnlyPathDir(t))
 
 	_, err := runRootCommand(t, repoRoot, "add", "production/platform/app", "--template", "laravel")
 	if err == nil {
@@ -139,6 +140,7 @@ func runRootCommand(t *testing.T, cwd string, args ...string) (string, error) {
 func writeTestConfig(t *testing.T, root string) {
 	t.Helper()
 
+	initGitRepo(t, root)
 	if err := os.WriteFile(filepath.Join(root, "keyseal.yaml"), []byte(defaultConfigYAML("default")), 0o644); err != nil {
 		t.Fatalf("WriteFile returned error: %v", err)
 	}
@@ -150,4 +152,59 @@ func writeFakeSOPS(t *testing.T, path, script string) {
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake sops: %v", err)
 	}
+}
+
+func initGitRepo(t *testing.T, root string) {
+	t.Helper()
+
+	gitRun(t, root, "init")
+	gitRun(t, root, "config", "user.name", "Keyseal Test")
+	gitRun(t, root, "config", "user.email", "keyseal@example.com")
+}
+
+func gitRun(t *testing.T, dir string, args ...string) {
+	t.Helper()
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v failed: %v\n%s", args, err, string(output))
+	}
+}
+
+func gitOutput(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v failed: %v\n%s", args, err, string(output))
+	}
+	return string(output)
+}
+
+func gitBinDir(t *testing.T) string {
+	t.Helper()
+
+	path, err := exec.LookPath("git")
+	if err != nil {
+		t.Fatalf("git not found: %v", err)
+	}
+	return filepath.Dir(path)
+}
+
+func gitOnlyPathDir(t *testing.T) string {
+	t.Helper()
+
+	toolDir := t.TempDir()
+	gitPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Fatalf("git not found: %v", err)
+	}
+	if err := os.Symlink(gitPath, filepath.Join(toolDir, "git")); err != nil {
+		t.Fatalf("Symlink returned error: %v", err)
+	}
+	return toolDir
 }

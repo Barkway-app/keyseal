@@ -8,6 +8,9 @@ sops:
   binary: sops
   age_key_file: ~/.config/sops/age/keys.txt
 
+git:
+  auto_commit: false
+
 defaults:
   output_format: dotenv
   output_dir: /run/secrets

@@ -20,15 +20,60 @@ jobs:
         with:
           go-version: "1.22"
 
+      - name: Install nfpm
+        run: |
+          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt-get update -q
+          sudo apt-get install -y nfpm
+
       - name: Verify repository
         run: make check
+
+      - name: Extract changelog section
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          HEADING="## ${TAG}"
+
+          awk -v heading="${HEADING}" '
+            $0 == heading { found=1; next }
+            found && /^## /  { exit }
+            found            { print }
+          ' CHANGELOG.md | sed '/./,$!d' > /tmp/release-notes.md
+
+          if [ ! -s /tmp/release-notes.md ]; then
+            echo "ERROR: No changelog section found for ${TAG}" >&2
+            echo "Add a '${HEADING}' section to CHANGELOG.md before pushing this tag." >&2
+            exit 1
+          fi
+
+          echo "Release notes for ${TAG}:"
+          cat /tmp/release-notes.md
 
       - name: Build release artifacts
         run: make dist VERSION=${GITHUB_REF_NAME} COMMIT=${GITHUB_SHA} DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+      - name: Verify packages
+        run: |
+          sudo apt-get install -y rpm
+          for f in dist/*.deb; do
+            echo "=== $f ==="
+            dpkg-deb --info "$f"
+            dpkg-deb --contents "$f" | grep usr/bin/keyseal
+          done
+          for f in dist/*.rpm; do
+            echo "=== $f ==="
+            rpm -qip "$f"
+            rpm -qlp "$f" | grep usr/bin/keyseal
+          done
+          grep '\.deb' dist/*_checksums.txt
+          grep '\.rpm' dist/*_checksums.txt
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body_path: /tmp/release-notes.md
           files: |
             dist/*.tar.gz
+            dist/*.deb
+            dist/*.rpm
             dist/*_checksums.txt

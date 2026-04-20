@@ -1,0 +1,25 @@
+name: keyseal
+arch: "__ARCH__"
+version: "__VERSION__"
+maintainer: "Barkway <open-source@barkway.app>"
+homepage: "https://github.com/Barkway-app/keyseal"
+license: "GPL-3.0-only"
+description: |
+  keyseal is a CLI for managing encrypted secrets in Git repositories,
+  using sops and age to standardise encrypted file workflows.
+
+contents:
+  - src: "__BINARY_PATH__"
+    dst: /usr/bin/keyseal
+    file_info:
+      mode: 0755
+
+  - src: README.md
+    dst: /usr/share/doc/keyseal/README.md
+    file_info:
+      mode: 0644
+
+  - src: LICENSE
+    dst: /usr/share/doc/keyseal/LICENSE
+    file_info:
+      mode: 0644

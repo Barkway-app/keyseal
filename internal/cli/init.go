@@ -98,6 +98,9 @@ sops:
   binary: %s
   age_key_file: %s
 
+git:
+  auto_commit: %t
+
 defaults:
   output_format: %s
   output_dir: %s
@@ -110,7 +113,7 @@ validation:
 profiles:
   %s:
     renders: []
-`, cfg.Version, cfg.Repository.Root, cfg.Repository.EncryptedExtension, cfg.SOPS.Binary, cfg.SOPS.AgeKeyFile, cfg.Defaults.OutputFormat, cfg.Defaults.OutputDir, cfg.Defaults.FileMode, cfg.Validation.RequireValues, cfg.Validation.KeyPattern, profile)) + "\n"
+`, cfg.Version, cfg.Repository.Root, cfg.Repository.EncryptedExtension, cfg.SOPS.Binary, cfg.SOPS.AgeKeyFile, cfg.Git.AutoCommit, cfg.Defaults.OutputFormat, cfg.Defaults.OutputDir, cfg.Defaults.FileMode, cfg.Validation.RequireValues, cfg.Validation.KeyPattern, profile)) + "\n"
 }
 
 func defaultSOPSYAML() string {

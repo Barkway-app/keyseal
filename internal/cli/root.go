@@ -28,10 +28,16 @@ func newRootCommand() *cobra.Command {
 		Short: "Small CLI for SOPS + age repo-backed secrets workflows",
 		Long: "Keyseal is a workflow layer over SOPS, age, and Git-backed encrypted files.\n" +
 			"It helps bootstrap a repo layout, scaffold starter secret documents, render decrypted env data,\n" +
-			"run child commands with injected secrets, and validate repository health.",
+			"inspect Git-backed secret history, commit intended changes, run child commands with injected secrets,\n" +
+			"and validate repository health.",
 		Example: "  keyseal init\n" +
 			"  keyseal add production/platform/app --template laravel\n" +
+			"  keyseal status\n" +
+			"  keyseal diff production/platform/app\n" +
+			"  keyseal history production/platform/app\n" +
+			"  keyseal commit -m \"Rotate Stripe webhook secret\"\n" +
 			"  keyseal edit production/platform/app\n" +
+			"  keyseal rollback production/platform/app --to abc1234 --dry-run\n" +
 			"  keyseal render production/platform/app --stdout\n" +
 			"  keyseal exec production/platform/app -- env | grep APP_\n" +
 			"  keyseal doctor\n" +
@@ -53,6 +59,11 @@ func newRootCommand() *cobra.Command {
 		newInitCommand(),
 		newAddCommand(),
 		newEditCommand(),
+		newStatusCommand(),
+		newDiffCommand(),
+		newHistoryCommand(),
+		newCommitCommand(),
+		newRollbackCommand(),
 		newRenderCommand(),
 		newExecCommand(),
 		newDoctorCommand(),

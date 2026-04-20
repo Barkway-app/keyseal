@@ -40,7 +40,7 @@ func Run(cwd string) (Result, error) {
 	runOutputPathChecks(cfg, &result)
 	runRepoArtifactChecks(repoRoot, &result)
 
-	sopsAvailable := runSOPSBinaryChecks(cfg.SOPS.Binary, &result)
+	sopsAvailable := runSOPSBinaryChecks(cfg, cwd, &result)
 	if !repoRootReady {
 		result.Add(CheckResult{
 			Name:     "secret discovery",
@@ -54,7 +54,7 @@ func Run(cwd string) (Result, error) {
 		return result, nil
 	}
 
-	if err := runSecretChecks(repoRoot, cfg, sopsAvailable, &result); err != nil {
+	if err := runSecretChecks(cwd, repoRoot, cfg, sopsAvailable, &result); err != nil {
 		return result, fmt.Errorf("run secret checks: %w", err)
 	}
 	return result, nil
@@ -358,7 +358,8 @@ func runSOPSConfigChecks(cwd string, result *Result) {
 	})
 }
 
-func runSOPSBinaryChecks(binary string, result *Result) bool {
+func runSOPSBinaryChecks(cfg config.Config, cwd string, result *Result) bool {
+	binary := cfg.SOPS.Binary
 	resolved, err := sopsutil.LookPath(binary)
 	if err != nil {
 		result.Add(CheckResult{
@@ -378,7 +379,7 @@ func runSOPSBinaryChecks(binary string, result *Result) bool {
 		return false
 	}
 
-	version, err := sopsutil.Version(binary)
+	version, err := sopsutil.Version(binary, config.ResolvePath(cwd, cfg.SOPS.AgeKeyFile))
 	if err != nil {
 		result.Add(CheckResult{
 			Name:     "sops binary",
@@ -455,7 +456,7 @@ func runRepoArtifactChecks(repoRoot string, result *Result) {
 	})
 }
 
-func runSecretChecks(repoRoot string, cfg config.Config, sopsAvailable bool, result *Result) error {
+func runSecretChecks(cwd, repoRoot string, cfg config.Config, sopsAvailable bool, result *Result) error {
 	files, err := repo.DiscoverEncryptedFiles(repoRoot, cfg.Repository.EncryptedExtension)
 	if err != nil {
 		return err
@@ -565,7 +566,7 @@ func runSecretChecks(repoRoot string, cfg config.Config, sopsAvailable bool, res
 			continue
 		}
 
-		plaintext, err := sopsutil.DecryptFile(cfg.SOPS.Binary, file)
+		plaintext, err := sopsutil.DecryptFile(cfg.SOPS.Binary, config.ResolvePath(cwd, cfg.SOPS.AgeKeyFile), file)
 		if err != nil {
 			result.Add(CheckResult{
 				Name:     fmt.Sprintf("secret %s", logical),

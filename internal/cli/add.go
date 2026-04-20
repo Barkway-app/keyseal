@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Barkway-app/keyseal/internal/config"
 	"github.com/Barkway-app/keyseal/internal/fsutil"
 	"github.com/Barkway-app/keyseal/internal/repo"
 	"github.com/Barkway-app/keyseal/internal/schema"
@@ -18,6 +19,7 @@ func newAddCommand() *cobra.Command {
 	var kind string
 	var templateName string
 	var force bool
+	var commitConfig commitFlags
 
 	cmd := &cobra.Command{
 		Use:   "add <logical-name>",
@@ -25,20 +27,33 @@ func newAddCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Long: "Create a starter secret document at <logical-name>.enc.yaml.\n" +
 			"Keyseal uses a non-interactive SOPS flow that encrypts the starter document before writing the final file.\n" +
-			"No plaintext starter content is written to the final .enc.yaml path.",
+			"No plaintext starter content is written to the final .enc.yaml path.\n" +
+			"Use --commit or -m to commit the new file immediately. -m implies --commit.",
 		Example: "  keyseal add production/platform/app\n" +
 			"  keyseal add production/platform/app --template laravel\n" +
+			"  keyseal add production/platform/app -m \"Add production app secret\"\n" +
 			"  keyseal edit production/platform/app",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if kind != "env" {
-				return fmt.Errorf("unsupported kind %q; only env is supported in v1 RC", kind)
+				return fmt.Errorf("unsupported kind %q; only env is supported", kind)
 			}
 
-			cfg, cwd, err := loadConfigFromCWD()
+			ctx, err := loadGitWorkflowContext()
 			if err != nil {
 				return err
 			}
-			root := cfg.RepoRoot(cwd)
+			cfg := ctx.Config
+			root := ctx.KeysealRoot
+			ageKeyFile := config.ResolvePath(ctx.CWD, cfg.SOPS.AgeKeyFile)
+			commitDecision, err := resolveCommitDecision(cmd, cfg, commitConfig)
+			if err != nil {
+				return err
+			}
+			if commitDecision.Enabled {
+				if err := ensureRepoReadyForCommit(ctx); err != nil {
+					return err
+				}
+			}
 
 			logical := args[0]
 			target, err := repo.LogicalNameToPath(root, logical, cfg.Repository.EncryptedExtension)
@@ -67,12 +82,23 @@ func newAddCommand() *cobra.Command {
 			if err := fsutil.CheckWritableFilePath(target, force); err != nil {
 				return err
 			}
-			ciphertext, err := sopsutil.EncryptFile(cfg.SOPS.Binary, body, target)
+			ciphertext, err := sopsutil.EncryptFile(cfg.SOPS.Binary, ageKeyFile, body, target)
 			if err != nil {
 				return fmt.Errorf("encrypt starter document with %q: %w", cfg.SOPS.Binary, err)
 			}
 			if err := fsutil.AtomicWriteFile(target, ciphertext, 0o600, force); err != nil {
 				return err
+			}
+			if commitDecision.Enabled {
+				message := commitDecision.Message
+				if message == "" {
+					message = defaultCommitMessageForSecretAdd(logical)
+				}
+				if err := commitPaths(ctx, []string{target}, message); err != nil {
+					return err
+				}
+				fmt.Fprintf(cmd.OutOrStdout(), "created encrypted starter %s\ncommitted Git change: %s\nnext: run `keyseal edit %s` to review or update it with SOPS\n", target, message, logical)
+				return nil
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "created encrypted starter %s\nnext: run `keyseal edit %s` to review or update it with SOPS\n", target, logical)
 			return nil
@@ -82,5 +108,6 @@ func newAddCommand() *cobra.Command {
 	cmd.Flags().StringVar(&kind, "kind", "env", "Secret document kind (only env is supported)")
 	cmd.Flags().StringVar(&templateName, "template", "", "Starter template: "+strings.Join(templates.SupportedNames(), ", "))
 	cmd.Flags().BoolVar(&force, "force", false, "Overwrite an existing target file")
+	bindCommitFlags(cmd, &commitConfig)
 	return cmd
 }

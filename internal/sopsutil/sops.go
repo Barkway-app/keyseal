@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+const ageKeyEnvVar = "SOPS_AGE_KEY_FILE"
+
 // ErrBinaryNotFound is returned when the configured sops binary cannot be found.
 var ErrBinaryNotFound = errors.New("sops binary not found")
 
@@ -28,7 +30,7 @@ func LookPath(binary string) (string, error) {
 // Stdout and stderr are captured separately so successful decryptions cannot be
 // polluted by warning output and failure messages can be sanitized without
 // accidentally echoing plaintext to the caller.
-func DecryptFile(binary, path string) ([]byte, error) {
+func DecryptFile(binary, ageKeyFile, path string) ([]byte, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, fmt.Errorf("stat encrypted file: %w", err)
 	}
@@ -36,6 +38,7 @@ func DecryptFile(binary, path string) ([]byte, error) {
 		return nil, err
 	}
 	cmd := exec.Command(binary, "--decrypt", path)
+	cmd.Env = commandEnv(ageKeyFile)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -47,7 +50,7 @@ func DecryptFile(binary, path string) ([]byte, error) {
 }
 
 // EditFile launches `sops <file>` attached to the current terminal.
-func EditFile(binary, path string) error {
+func EditFile(binary, ageKeyFile, path string) error {
 	if _, err := os.Stat(path); err != nil {
 		return fmt.Errorf("stat encrypted file: %w", err)
 	}
@@ -55,6 +58,7 @@ func EditFile(binary, path string) error {
 		return err
 	}
 	cmd := exec.Command(binary, path)
+	cmd.Env = commandEnv(ageKeyFile)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -65,11 +69,12 @@ func EditFile(binary, path string) error {
 }
 
 // Version returns the first non-empty line from `sops --version`.
-func Version(binary string) (string, error) {
+func Version(binary, ageKeyFile string) (string, error) {
 	if _, err := LookPath(binary); err != nil {
 		return "", err
 	}
 	cmd := exec.Command(binary, "--version")
+	cmd.Env = commandEnv(ageKeyFile)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -93,7 +98,7 @@ func Version(binary string) (string, error) {
 //
 // The caller owns the final write path so encrypted mode can keep plaintext out
 // of the destination `.enc.yaml` file entirely.
-func EncryptFile(binary string, plaintext []byte, filenameOverride string) ([]byte, error) {
+func EncryptFile(binary, ageKeyFile string, plaintext []byte, filenameOverride string) ([]byte, error) {
 	if _, err := LookPath(binary); err != nil {
 		return nil, err
 	}
@@ -118,6 +123,7 @@ func EncryptFile(binary string, plaintext []byte, filenameOverride string) ([]by
 	}
 
 	cmd := exec.Command(binary, "encrypt", "--filename-override", filenameOverride, tempPath)
+	cmd.Env = commandEnv(ageKeyFile)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -126,6 +132,16 @@ func EncryptFile(binary string, plaintext []byte, filenameOverride string) ([]by
 		return nil, fmt.Errorf("encrypt %s with sops: %s", filepath.Base(filenameOverride), sanitizeOutput(stderr.Bytes(), stdout.Bytes()))
 	}
 	return stdout.Bytes(), nil
+}
+
+// commandEnv preserves an explicit shell override and otherwise injects the
+// configured age key file so Keyseal-backed SOPS commands honor keyseal.yaml.
+func commandEnv(ageKeyFile string) []string {
+	env := os.Environ()
+	if os.Getenv(ageKeyEnvVar) != "" || strings.TrimSpace(ageKeyFile) == "" {
+		return env
+	}
+	return append(env, ageKeyEnvVar+"="+ageKeyFile)
 }
 
 func sanitizeOutput(primary, fallback []byte) string {

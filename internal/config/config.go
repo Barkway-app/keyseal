@@ -34,6 +34,7 @@ type Config struct {
 	Version    int                `yaml:"version"`
 	Repository RepositoryConfig   `yaml:"repository"`
 	SOPS       SOPSConfig         `yaml:"sops"`
+	Git        GitConfig          `yaml:"git"`
 	Defaults   DefaultsConfig     `yaml:"defaults"`
 	Validation ValidationConfig   `yaml:"validation"`
 	Profiles   map[string]Profile `yaml:"profiles"`
@@ -49,6 +50,11 @@ type RepositoryConfig struct {
 type SOPSConfig struct {
 	Binary     string `yaml:"binary"`
 	AgeKeyFile string `yaml:"age_key_file"`
+}
+
+// GitConfig controls small Git workflow defaults used by mutating commands.
+type GitConfig struct {
+	AutoCommit bool `yaml:"auto_commit"`
 }
 
 // DefaultsConfig contains render-time defaults used when flags are omitted.
@@ -89,6 +95,9 @@ func Default() Config {
 		SOPS: SOPSConfig{
 			Binary:     DefaultSOPSBinary,
 			AgeKeyFile: DefaultAgeKeyFile,
+		},
+		Git: GitConfig{
+			AutoCommit: false,
 		},
 		Defaults: DefaultsConfig{
 			OutputFormat: DefaultOutputFormat,
@@ -214,4 +223,13 @@ func ExpandUser(path string) string {
 		return home
 	}
 	return filepath.Join(home, strings.TrimPrefix(path, "~/"))
+}
+
+// ResolvePath expands "~" and resolves relative paths from the provided base.
+func ResolvePath(base, path string) string {
+	path = ExpandUser(path)
+	if path == "" || filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Clean(filepath.Join(base, path))
 }
