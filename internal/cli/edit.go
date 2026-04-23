@@ -7,7 +7,10 @@ import (
 
 	"github.com/Barkway-app/keyseal/internal/config"
 	"github.com/Barkway-app/keyseal/internal/repo"
+	"github.com/Barkway-app/keyseal/internal/schema"
+	"github.com/Barkway-app/keyseal/internal/secretfile"
 	"github.com/Barkway-app/keyseal/internal/sopsutil"
+	"github.com/Barkway-app/keyseal/internal/templates"
 	"github.com/spf13/cobra"
 )
 
@@ -18,6 +21,7 @@ func newEditCommand() *cobra.Command {
 		Use:   "edit <logical-name>",
 		Short: "Open an encrypted file with SOPS",
 		Long: "Resolve a logical name to <logical-name>.enc.yaml and run `sops <file>` using the configured SOPS binary.\n" +
+			"If the target file exists but is empty or whitespace-only, Keyseal bootstraps it with an encrypted starter document first.\n" +
 			"Use --commit or -m to commit the edited file after SOPS exits successfully. -m implies --commit.",
 		Example: "  keyseal edit production/platform/app\n" +
 			"  keyseal edit production/platform/app --commit\n" +
@@ -43,9 +47,31 @@ func newEditCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			classified, err := secretfile.Classify(target)
+			if err != nil {
+				return err
+			}
 			before, err := os.ReadFile(target)
 			if err != nil {
 				return fmt.Errorf("read encrypted file before edit: %w", err)
+			}
+			if classified.State == secretfile.StatePlaceholder {
+				doc, err := templates.Build(args[0], "")
+				if err != nil {
+					return err
+				}
+				body, err := schema.MarshalYAMLDocument(doc)
+				if err != nil {
+					return fmt.Errorf("marshal starter document: %w", err)
+				}
+				ciphertext, err := sopsutil.EncryptFile(ctx.Config.SOPS.Binary, ageKeyFile, body, target)
+				if err != nil {
+					return fmt.Errorf("encrypt starter document with %q: %w", ctx.Config.SOPS.Binary, err)
+				}
+				if err := os.WriteFile(target, ciphertext, 0o600); err != nil {
+					return fmt.Errorf("write encrypted starter before edit: %w", err)
+				}
+				fmt.Fprintf(cmd.ErrOrStderr(), "bootstrapped empty placeholder %s with an encrypted starter before editing\n", target)
 			}
 			if err := sopsutil.EditFile(ctx.Config.SOPS.Binary, ageKeyFile, target); err != nil {
 				return err

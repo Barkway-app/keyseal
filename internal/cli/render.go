@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Barkway-app/keyseal/internal/fsutil"
 	"github.com/Barkway-app/keyseal/internal/render"
@@ -20,7 +21,8 @@ func newRenderCommand() *cobra.Command {
 		Use:   "render <logical-name...>",
 		Short: "Decrypt, merge, and render secret files",
 		Long: "Decrypt and merge one or more env documents, then render them as dotenv, JSON, or YAML.\n" +
-			"Later files override earlier ones. Use --stdout to print secret values, or --out to write atomically to a file.",
+			"Later files override earlier ones. Empty or whitespace-only placeholder files are skipped.\n" +
+			"Use --stdout to print secret values, or --out to write atomically to a file.",
 		Example: "  keyseal render production/platform/app --stdout\n" +
 			"  keyseal render production/platform/app staging/platform/stripe --format json --out ./runtime/app-secrets.json",
 		Args: cobra.MinimumNArgs(1),
@@ -42,11 +44,14 @@ func newRenderCommand() *cobra.Command {
 				mode = cfg.Defaults.FileMode
 			}
 
-			docs, err := loadDocuments(cfg, cwd, args)
+			loaded, err := loadDocuments(cfg, cwd, args)
 			if err != nil {
 				return err
 			}
-			merged := render.MergeEnvDocs(docs)
+			if len(loaded.SkippedPlaceholders) > 0 {
+				fmt.Fprintf(cmd.ErrOrStderr(), "skipped %d empty placeholder secret file(s): %s\n", len(loaded.SkippedPlaceholders), strings.Join(loaded.SkippedPlaceholders, ", "))
+			}
+			merged := render.MergeEnvDocs(loaded.Docs)
 			body, err := render.Render(format, merged)
 			if err != nil {
 				return err
@@ -67,7 +72,7 @@ func newRenderCommand() *cobra.Command {
 			if err := fsutil.AtomicWriteFile(out, body, fileMode, force); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "rendered %d secret file(s) to %s\n", len(args), out)
+			fmt.Fprintf(cmd.OutOrStdout(), "rendered %d secret file(s) to %s\n", len(loaded.Docs), out)
 			return nil
 		},
 	}

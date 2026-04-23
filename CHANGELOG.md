@@ -4,6 +4,13 @@ All notable changes to Keyseal will be documented in this file.
 
 The format is intentionally lightweight for now and optimized for early public release tags.
 
+## Unreleased
+
+Highlights:
+- empty or whitespace-only `.enc.yaml` files are now treated as placeholder secrets so `render` and `exec` skip them when other requested secrets are usable, and fail clearly when every requested secret is still uninitialized
+- `keyseal edit` now bootstraps placeholder secret files with an encrypted starter document before opening SOPS, making recovery from empty placeholder files a first-class workflow
+- `keyseal doctor` now warns on empty placeholder secret files, continues to fail on non-empty plaintext content at encrypted paths, and includes regression coverage for the new secret-file classification behavior
+
 ## v0.2.0
 
 Highlights:

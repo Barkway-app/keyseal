@@ -12,6 +12,7 @@ import (
 	"github.com/Barkway-app/keyseal/internal/fsutil"
 	"github.com/Barkway-app/keyseal/internal/repo"
 	"github.com/Barkway-app/keyseal/internal/schema"
+	"github.com/Barkway-app/keyseal/internal/secretfile"
 	"github.com/Barkway-app/keyseal/internal/sopsutil"
 )
 
@@ -522,15 +523,15 @@ func runSecretChecks(cwd, repoRoot string, cfg config.Config, sopsAvailable bool
 			continue
 		}
 
-		rawFile, readErr := os.ReadFile(file)
-		if readErr != nil {
+		classified, err := secretfile.Classify(file)
+		if err != nil {
 			result.Add(CheckResult{
 				Name:     fmt.Sprintf("secret %s", logical),
 				Status:   StatusFail,
 				Severity: SeverityError,
 				Summary:  "Secret file could not be read",
 				Details: []string{
-					fmt.Sprintf("Read error: %v", readErr),
+					fmt.Sprintf("Read error: %v", err),
 				},
 				Remediation: []string{
 					fmt.Sprintf("Fix file permissions or recreate %s.", filepath.ToSlash(file)),
@@ -538,27 +539,37 @@ func runSecretChecks(cwd, repoRoot string, cfg config.Config, sopsAvailable bool
 			})
 			continue
 		}
-
-		// A valid env document without top-level sops metadata is usually a legacy
-		// plaintext starter file or a manual edit that bypassed SOPS entirely.
-		doc, _, parseErr := schema.ParseYAMLDocument(rawFile)
-		if parseErr == nil && !schema.HasSOPSMetadata(rawFile) {
-			if validateErr := doc.Validate(opts); validateErr == nil {
-				result.Add(CheckResult{
-					Name:     fmt.Sprintf("secret %s", logical),
-					Status:   StatusFail,
-					Severity: SeverityError,
-					Summary:  fmt.Sprintf("%s appears to be plaintext rather than SOPS-encrypted content", filepath.ToSlash(file)),
-					Details: []string{
-						"This file parses as a valid env document but does not contain the top-level sops metadata block written by SOPS.",
-						"This usually means the file was created by an older plaintext scaffold flow or was edited manually outside SOPS.",
-					},
-					Remediation: []string{
-						fmt.Sprintf("Encrypt the file with `keyseal edit %s` or recreate it with `keyseal add %s`.", logical, logical),
-					},
-				})
-				continue
-			}
+		switch classified.State {
+		case secretfile.StatePlaceholder:
+			result.Add(CheckResult{
+				Name:     fmt.Sprintf("secret %s", logical),
+				Status:   StatusWarn,
+				Severity: SeverityWarning,
+				Summary:  fmt.Sprintf("%s is an empty or uninitialized placeholder file", filepath.ToSlash(file)),
+				Details: []string{
+					"Empty or whitespace-only files at encrypted paths are skipped until they are populated.",
+					"Decrypt and schema validation were not attempted for this file.",
+				},
+				Remediation: []string{
+					fmt.Sprintf("Populate the secret with `keyseal edit %s` or recreate it with `keyseal add %s`.", logical, logical),
+				},
+			})
+			continue
+		case secretfile.StatePlaintext:
+			result.Add(CheckResult{
+				Name:     fmt.Sprintf("secret %s", logical),
+				Status:   StatusFail,
+				Severity: SeverityError,
+				Summary:  fmt.Sprintf("%s is non-empty plaintext at an encrypted path", filepath.ToSlash(file)),
+				Details: []string{
+					"This file contains non-empty content but does not contain the top-level sops metadata block written by SOPS.",
+					"Keyseal treats this as a plaintext-at-encrypted-path failure so unencrypted secret content is not ignored.",
+				},
+				Remediation: []string{
+					fmt.Sprintf("Encrypt the file with `keyseal edit %s` or recreate it with `keyseal add %s`.", logical, logical),
+				},
+			})
+			continue
 		}
 
 		if !sopsAvailable {

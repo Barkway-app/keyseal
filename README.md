@@ -99,15 +99,15 @@ make build
 
 - `keyseal init` bootstraps a repository layout, `keyseal.yaml`, and `.sops.yaml`
 - `keyseal add <logical-name>` creates and encrypts a starter env secret document at the final `.enc.yaml` path, with optional immediate Git commit support
-- `keyseal edit <logical-name>` opens the target file with `sops`, with optional immediate Git commit support
+- `keyseal edit <logical-name>` opens the target file with `sops`, bootstrapping empty placeholder files first when needed
 - `keyseal status [logical-name]` shows Git status for Keyseal-managed files, optionally narrowed to one secret
 - `keyseal diff <logical-name>` shows `git diff` for one secret file
 - `keyseal history <logical-name>` shows file-scoped Git history for one secret file, with optional `--oneline` output
 - `keyseal commit` stages current Keyseal-managed changes and creates a Git commit
 - `keyseal rollback <logical-name> --to <commit>` restores one secret file from Git history
-- `keyseal render <logical-name...>` decrypts, merges, and renders secret values
-- `keyseal exec <logical-name...> -- <command...>` runs a child process with merged env vars
-- `keyseal doctor` validates config sanity, `.sops.yaml` readiness, placeholder recipients, SOPS availability, plaintext mistakes, and decrypted document shape
+- `keyseal render <logical-name...>` decrypts, merges, and renders secret values, skipping empty placeholder files
+- `keyseal exec <logical-name...> -- <command...>` runs a child process with merged env vars, skipping empty placeholder files
+- `keyseal doctor` validates config sanity, `.sops.yaml` readiness, placeholder recipients, SOPS availability, plaintext mistakes, empty placeholders, and decrypted document shape
 - `keyseal version` reports version, commit, and build date metadata
 
 Detailed flags, examples, and behavior notes live in the wiki:

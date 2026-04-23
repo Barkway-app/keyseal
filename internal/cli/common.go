@@ -11,40 +11,67 @@ import (
 	"github.com/Barkway-app/keyseal/internal/gitutil"
 	"github.com/Barkway-app/keyseal/internal/repo"
 	"github.com/Barkway-app/keyseal/internal/schema"
+	"github.com/Barkway-app/keyseal/internal/secretfile"
 	"github.com/Barkway-app/keyseal/internal/sopsutil"
 	"github.com/spf13/cobra"
 )
 
-func loadDocuments(cfg config.Config, cwd string, logicalNames []string) ([]schema.EnvSecretDocument, error) {
+type loadedDocuments struct {
+	Docs                []schema.EnvSecretDocument
+	LoadedLogicalNames  []string
+	SkippedPlaceholders []string
+}
+
+func loadDocuments(cfg config.Config, cwd string, logicalNames []string) (loadedDocuments, error) {
 	opts := schema.DefaultValidationOptions()
 	opts.RequireValues = cfg.Validation.RequireValues
 	opts.KeyPattern = cfg.Validation.KeyPattern
 
 	root := cfg.RepoRoot(cwd)
 	ageKeyFile := config.ResolvePath(cwd, cfg.SOPS.AgeKeyFile)
-	docs := make([]schema.EnvSecretDocument, 0, len(logicalNames))
+	result := loadedDocuments{
+		Docs:               make([]schema.EnvSecretDocument, 0, len(logicalNames)),
+		LoadedLogicalNames: make([]string, 0, len(logicalNames)),
+	}
 	for _, logical := range logicalNames {
 		// Logical names are the only user-facing identifier. They must be mapped
 		// through the repo package so every command applies the same path safety
 		// rules and naming contract.
 		path, err := repo.LogicalNameToPath(root, logical, cfg.Repository.EncryptedExtension)
 		if err != nil {
-			return nil, err
+			return loadedDocuments{}, err
+		}
+		classified, err := secretfile.Classify(path)
+		if err != nil {
+			return loadedDocuments{}, fmt.Errorf("inspect %s: %w", logical, err)
+		}
+		switch classified.State {
+		case secretfile.StateMissing:
+			return loadedDocuments{}, fmt.Errorf("secret %s not found at %s", logical, path)
+		case secretfile.StatePlaceholder:
+			result.SkippedPlaceholders = append(result.SkippedPlaceholders, logical)
+			continue
+		case secretfile.StatePlaintext:
+			return loadedDocuments{}, fmt.Errorf("secret %s is non-empty plaintext at encrypted path %s: file does not contain SOPS metadata", logical, path)
 		}
 		plaintext, err := sopsutil.DecryptFile(cfg.SOPS.Binary, ageKeyFile, path)
 		if err != nil {
-			return nil, err
+			return loadedDocuments{}, err
 		}
 		doc, _, err := schema.ParseYAMLDocument(plaintext)
 		if err != nil {
-			return nil, fmt.Errorf("parse %s: %w", logical, err)
+			return loadedDocuments{}, fmt.Errorf("parse %s: %w", logical, err)
 		}
 		if err := doc.Validate(opts); err != nil {
-			return nil, fmt.Errorf("validate %s: %w", logical, err)
+			return loadedDocuments{}, fmt.Errorf("validate %s: %w", logical, err)
 		}
-		docs = append(docs, doc)
+		result.Docs = append(result.Docs, doc)
+		result.LoadedLogicalNames = append(result.LoadedLogicalNames, logical)
 	}
-	return docs, nil
+	if len(result.Docs) == 0 && len(result.SkippedPlaceholders) > 0 {
+		return loadedDocuments{}, fmt.Errorf("all requested secrets are empty or uninitialized placeholder files: %s", strings.Join(result.SkippedPlaceholders, ", "))
+	}
+	return result, nil
 }
 
 // gitWorkflowContext collects the Keyseal and Git roots needed to safely map

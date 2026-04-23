@@ -121,7 +121,57 @@ func TestDoctorFlagsPlaintextStarterFiles(t *testing.T) {
 	if check.Status != doctor.StatusFail {
 		t.Fatalf("expected plaintext failure, got %#v", check)
 	}
-	if !strings.Contains(check.Summary, "appears to be plaintext") {
+	if !strings.Contains(check.Summary, "non-empty plaintext") {
+		t.Fatalf("unexpected summary: %q", check.Summary)
+	}
+}
+
+func TestDoctorWarnsOnEmptyPlaceholderSecretFiles(t *testing.T) {
+	dir := t.TempDir()
+	writeDoctorConfig(t, dir, "missing-sops", "0600")
+	writeSOPSConfig(t, dir, "creation_rules:\n  - path_regex: production/.*\\.enc\\.yaml$\n    age: age1realrecipient\n")
+	secretPath := filepath.Join(dir, "production/platform/app.enc.yaml")
+	if err := os.MkdirAll(filepath.Dir(secretPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+	if err := os.WriteFile(secretPath, nil, 0o600); err != nil {
+		t.Fatalf("write secret: %v", err)
+	}
+
+	result, err := doctor.Run(dir)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	check := findCheck(t, result, "secret production/platform/app")
+	if check.Status != doctor.StatusWarn {
+		t.Fatalf("expected empty placeholder warning, got %#v", check)
+	}
+	if !strings.Contains(check.Summary, "empty or uninitialized placeholder") {
+		t.Fatalf("unexpected summary: %q", check.Summary)
+	}
+}
+
+func TestDoctorWarnsOnWhitespaceOnlyPlaceholderSecretFiles(t *testing.T) {
+	dir := t.TempDir()
+	writeDoctorConfig(t, dir, "missing-sops", "0600")
+	writeSOPSConfig(t, dir, "creation_rules:\n  - path_regex: production/.*\\.enc\\.yaml$\n    age: age1realrecipient\n")
+	secretPath := filepath.Join(dir, "production/platform/app.enc.yaml")
+	if err := os.MkdirAll(filepath.Dir(secretPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+	if err := os.WriteFile(secretPath, []byte(" \n\t"), 0o600); err != nil {
+		t.Fatalf("write secret: %v", err)
+	}
+
+	result, err := doctor.Run(dir)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	check := findCheck(t, result, "secret production/platform/app")
+	if check.Status != doctor.StatusWarn {
+		t.Fatalf("expected whitespace placeholder warning, got %#v", check)
+	}
+	if !strings.Contains(check.Summary, "empty or uninitialized placeholder") {
 		t.Fatalf("unexpected summary: %q", check.Summary)
 	}
 }
