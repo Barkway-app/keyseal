@@ -2,7 +2,21 @@
 
 All notable changes to Keyseal will be documented in this file.
 
-The format is intentionally lightweight for now and optimized for early public release tags.
+The format is intentionally lightweight and optimized for public release tags.
+
+## v1.0.0
+
+This release marks the first stable release of Keyseal.
+
+It adds `keyseal verify`, a strict, non-mutating validation command designed for CI. `verify` reuses the same core checks as `doctor`, but fails on warnings as well as errors, making it suitable as a proper pipeline gate. `--json` output can also now be used more cleanly in automated workflows.
+
+With this release, the v1 `keyseal.yaml` config contract and the `kind: env` secret document shape are now treated as stable. The documentation has also been tightened up to better distinguish production-ready workflows from starter templates that still need real secret values.
+
+Highlights:
+- `keyseal verify` adds a strict, non-mutating CI gate that reuses doctor checks but fails on warnings as well as failures
+- Keyseal is now documented as production-ready for Barkway's Git-backed SOPS secret workflow
+- the v1 `keyseal.yaml` config contract and `kind: env` secret document shape are treated as stable
+- docs now distinguish production-ready tooling from starter templates that still require real secret values
 
 ## v0.3.0
 

@@ -7,11 +7,9 @@
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](./LICENSE)
 [![Go Version](https://img.shields.io/badge/go-1.22%2B-00ADD8)](https://go.dev/)
 
-> **Not production ready** — this project is under active development and not yet suitable for production use.
->
 > **Default flow:** `keyseal add` scaffolds and encrypts a new secret document immediately, without writing plaintext starter content to the final `.enc.yaml` path.
 
-Keyseal is a small Go CLI that standardizes encrypted file workflows around `sops`, `age`, and Git.
+Keyseal is a small Go CLI that standardizes encrypted file workflows around `sops`, `age`, and Git. Barkway uses it in production for Git-backed SOPS secret workflows.
 
 It helps teams:
 - keep encrypted secret files in a repository
@@ -22,6 +20,7 @@ It helps teams:
 - render decrypted values into runtime formats
 - run commands with decrypted environment variables injected
 - validate repository layout and config health
+- enforce strict CI verification before release or deployment
 
 Keyseal does not implement encryption itself, replace SOPS, run a server, expose an API, or behave like a hosted secrets platform.
 
@@ -109,6 +108,7 @@ make build
 - `keyseal render <logical-name...>` decrypts, merges, and renders secret values, skipping empty placeholder files
 - `keyseal exec <logical-name...> -- <command...>` runs a child process with merged env vars, skipping empty placeholder files
 - `keyseal doctor` validates config sanity, SOPS availability, age availability warnings, `.sops.yaml` readiness, placeholder recipients, plaintext mistakes, empty placeholders, and decrypted document shape
+- `keyseal verify` runs strict CI checks and fails on any doctor warning or failure
 - `keyseal version` reports version, commit, and build date metadata
 
 Detailed flags, examples, and behavior notes live in the wiki:
@@ -172,6 +172,7 @@ keyseal render production/platform/app --stdout --format json
 keyseal exec production/platform/app -- php artisan migrate
 keyseal rollback production/platform/app --to <commit> --dry-run
 keyseal doctor
+keyseal verify
 ```
 
 Key workflow details:
@@ -197,12 +198,12 @@ keyseal version --short
 ```
 
 Release builds stamp version, commit, and build date metadata via Go linker flags. Local builds default to `dev`, `unknown`, and `unknown` unless you pass `VERSION`, `COMMIT`, and `DATE`.
-When Git metadata is available, local builds default to the latest `v*` tag and the short current commit, so `keyseal --version` reports output like `keyseal v0.1.0 (abc1234)`.
+When Git metadata is available, local builds default to the latest `v*` tag and the short current commit, so `keyseal --version` reports output like `keyseal v1.0.0 (abc1234)`.
 
 ## Release artifacts
 
 ```bash
-make dist VERSION=v0.2.0 COMMIT=$(git rev-parse --short HEAD) DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+make dist VERSION=v1.0.0 COMMIT=$(git rev-parse --short HEAD) DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 ```
 
 `make dist` builds tar.gz archives for the supported release platforms, generates `.deb` and `.rpm` packages for Linux (amd64, arm64), and writes a single SHA256 checksums file covering all artifacts to `dist/`.
@@ -210,7 +211,7 @@ make dist VERSION=v0.2.0 COMMIT=$(git rev-parse --short HEAD) DATE=$(date -u +"%
 Linux packages require [nfpm](https://nfpm.goreleaser.com/install/) to be installed. To build only the Linux packages without archives:
 
 ```bash
-make packages VERSION=v0.2.0
+make packages VERSION=v1.0.0
 ```
 
 Tagged `v*` pushes publish all artifacts — archives, packages, and checksums — as GitHub Releases.
@@ -236,6 +237,8 @@ GitHub Actions runs:
 - `go test ./...`
 - `go build ./cmd/keyseal`
 - tagged `v*` release builds that publish tar.gz archives, `.deb` packages, `.rpm` packages, and checksums
+
+For repositories managed by Keyseal, use `keyseal verify` as the strict health gate in release and deploy workflows.
 
 ## Built by Barkway
 

@@ -42,6 +42,7 @@ func newRootCommand() *cobra.Command {
 			"  keyseal render production/platform/app --stdout\n" +
 			"  keyseal exec production/platform/app -- env | grep APP_\n" +
 			"  keyseal doctor\n" +
+			"  keyseal verify\n" +
 			"  keyseal --version\n" +
 			"  keyseal version --short",
 		SilenceUsage:  true,
@@ -69,6 +70,7 @@ func newRootCommand() *cobra.Command {
 		newRenderCommand(),
 		newExecCommand(),
 		newDoctorCommand(),
+		newVerifyCommand(),
 		newVersionCommand(),
 	)
 	return cmd

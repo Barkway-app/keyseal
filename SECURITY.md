@@ -1,6 +1,6 @@
 # Security Policy
 
-Keyseal is a security-adjacent CLI, but it is currently released as a public release candidate and should not be treated as production-ready.
+Keyseal is a security-adjacent CLI used by Barkway for Git-backed SOPS secret workflows. It does not implement cryptography itself; encryption, decryption, and recipient handling are delegated to SOPS and the configured key backend.
 
 ## Reporting a vulnerability
 
