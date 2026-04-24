@@ -16,7 +16,7 @@ func TestAddDefaultWritesEncryptedOutputOnly(t *testing.T) {
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll returned error: %v", err)
 	}
-	writeFakeSOPS(t, filepath.Join(binDir, "sops"), "#!/bin/sh\nif [ \"$1\" = \"encrypt\" ] && [ \"$2\" = \"--filename-override\" ]; then\n  printf 'version: 1\\nkind: env\\nname: ENC[AES256_GCM,data:name,type:str]\\nvalues:\\n  APP_KEY: ENC[AES256_GCM,data:value,type:str]\\nsops:\\n  version: 3.9.0\\n'\n  exit 0\nfi\nexit 1\n")
+	writeFakeSOPS(t, filepath.Join(binDir, "sops"), "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  printf 'sops 3.9.0\\n'\n  exit 0\nfi\nif [ \"$1\" = \"encrypt\" ] && [ \"$2\" = \"--filename-override\" ]; then\n  printf 'version: 1\\nkind: env\\nname: ENC[AES256_GCM,data:name,type:str]\\nvalues:\\n  APP_KEY: ENC[AES256_GCM,data:value,type:str]\\nsops:\\n  version: 3.9.0\\n'\n  exit 0\nfi\nexit 1\n")
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
 	output, err := runRootCommand(t, repoRoot, "add", "production/platform/app", "--template", "laravel")
@@ -50,7 +50,7 @@ func TestAddDefaultMissingSOPSDoesNotCreateFinalFile(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected encrypted add to fail without sops")
 	}
-	if !strings.Contains(err.Error(), "sops binary not found") {
+	if !strings.Contains(err.Error(), "binary not found") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	target := filepath.Join(repoRoot, "production/platform/app.enc.yaml")
@@ -78,7 +78,7 @@ func TestAddForceBehaviorMatchesBothModes(t *testing.T) {
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll returned error: %v", err)
 	}
-	writeFakeSOPS(t, filepath.Join(binDir, "sops"), "#!/bin/sh\nif [ \"$1\" = \"encrypt\" ] && [ \"$2\" = \"--filename-override\" ]; then\n  printf 'ENC[test]\\n'\n  exit 0\nfi\nexit 1\n")
+	writeFakeSOPS(t, filepath.Join(binDir, "sops"), "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  printf 'sops 3.9.0\\n'\n  exit 0\nfi\nif [ \"$1\" = \"encrypt\" ] && [ \"$2\" = \"--filename-override\" ]; then\n  printf 'ENC[test]\\n'\n  exit 0\nfi\nexit 1\n")
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
 	if _, err := runRootCommand(t, repoRoot, "add", "production/platform/app", "--force"); err != nil {

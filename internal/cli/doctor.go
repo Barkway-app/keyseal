@@ -14,7 +14,7 @@ func newDoctorCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Validate repository and config health",
-		Long: "Validate keyseal.yaml, .sops.yaml readiness, placeholder recipients, SOPS availability,\n" +
+		Long: "Validate keyseal.yaml, SOPS availability, age availability warnings, .sops.yaml readiness, placeholder recipients,\n" +
 			"encrypted file consistency, plaintext mistakes, empty placeholder files, and decrypted env document shape without exposing secret values.\n" +
 			"Use --json for machine-readable output in CI or scripts.",
 		Example: "  keyseal doctor\n" +

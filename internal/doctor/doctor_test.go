@@ -12,6 +12,7 @@ import (
 func TestDoctorRunHappyPath(t *testing.T) {
 	dir := t.TempDir()
 	writeFakeSOPS(t, dir, "fake-sops", "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  echo 'sops 3.9.0'\n  exit 0\nfi\nif [ \"$1\" = \"--decrypt\" ]; then\n  printf 'version: 1\\nkind: env\\nname: production/platform/app\\nvalues:\\n  APP_ENV: production\\n'\n  exit 0\nfi\nexit 0\n")
+	writeFakeSOPS(t, dir, "age", "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  echo 'age 1.2.0'\n  exit 0\nfi\nexit 0\n")
 	writeDoctorConfig(t, dir, "fake-sops", "0600")
 	writeSOPSConfig(t, dir, "creation_rules:\n  - path_regex: production/.*\\.enc\\.yaml$\n    age: age1realrecipient\n")
 	writeEncryptedSecret(t, dir, "production/platform/app.enc.yaml")
@@ -30,6 +31,11 @@ func TestDoctorRunHappyPath(t *testing.T) {
 	}
 	if !containsSubstring(check.Details, "sops 3.9.0") {
 		t.Fatalf("expected version detail, got %#v", check.Details)
+	}
+
+	ageCheck := findCheck(t, result, "age binary")
+	if ageCheck.Status != doctor.StatusOK {
+		t.Fatalf("expected age binary check to pass, got %#v", ageCheck)
 	}
 }
 
@@ -79,6 +85,50 @@ func TestDoctorFailsWhenSOPSConfigMissing(t *testing.T) {
 	check := findCheck(t, result, ".sops.yaml")
 	if check.Status != doctor.StatusFail {
 		t.Fatalf("expected missing .sops.yaml failure, got %#v", check)
+	}
+}
+
+func TestDoctorReportsSOPSBinaryBeforeSOPSConfig(t *testing.T) {
+	dir := t.TempDir()
+	writeDoctorConfig(t, dir, "missing-sops", "0600")
+
+	result, err := doctor.Run(dir)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if len(result.Checks) < 3 {
+		t.Fatalf("expected multiple checks, got %#v", result.Checks)
+	}
+	if result.Checks[0].Name != "sops binary" || result.Checks[1].Name != "age binary" || result.Checks[2].Name != "keyseal.yaml" {
+		t.Fatalf("expected tool checks immediately after config, got %#v", result.Checks[:3])
+	}
+	if result.Checks[0].Status != doctor.StatusFail {
+		t.Fatalf("expected missing SOPS to fail, got %#v", result.Checks[0])
+	}
+	if !containsSubstring(result.Checks[0].Remediation, "sops.binary") {
+		t.Fatalf("expected sops.binary remediation, got %#v", result.Checks[0].Remediation)
+	}
+}
+
+func TestDoctorWarnsWhenAgeBinaryMissing(t *testing.T) {
+	dir := t.TempDir()
+	writeFakeSOPS(t, dir, "fake-sops", "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  echo 'sops 3.9.0'\n  exit 0\nfi\nexit 0\n")
+	writeDoctorConfigWithAge(t, dir, "fake-sops", "missing-age", "0600")
+	writeSOPSConfig(t, dir, "creation_rules:\n  - path_regex: production/.*\\.enc\\.yaml$\n    age: age1realrecipient\n")
+
+	result, err := doctor.Run(dir)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	check := findCheck(t, result, "age binary")
+	if check.Status != doctor.StatusWarn {
+		t.Fatalf("expected missing age to warn, got %#v", check)
+	}
+	if !containsSubstring(check.Remediation, "sops.age_binary") {
+		t.Fatalf("expected sops.age_binary remediation, got %#v", check.Remediation)
+	}
+	if result.HasFailures() {
+		t.Fatalf("did not expect missing age warning to fail doctor, got %#v", result.Checks)
 	}
 }
 
@@ -253,12 +303,18 @@ func containsSubstring(values []string, needle string) bool {
 
 func writeDoctorConfig(t *testing.T, dir, binary, mode string) {
 	t.Helper()
+	writeDoctorConfigWithAge(t, dir, binary, "age", mode)
+}
+
+func writeDoctorConfigWithAge(t *testing.T, dir, binary, ageBinary, mode string) {
+	t.Helper()
 	cfg := `version: 1
 repository:
   root: .
   encrypted_extension: .enc.yaml
 sops:
   binary: ` + binary + `
+  age_binary: ` + ageBinary + `
 defaults:
   output_format: dotenv
   output_dir: /run/secrets

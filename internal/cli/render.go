@@ -43,6 +43,9 @@ func newRenderCommand() *cobra.Command {
 			if mode == "" {
 				mode = cfg.Defaults.FileMode
 			}
+			if err := ensureSOPSAvailable(cfg, cwd); err != nil {
+				return err
+			}
 
 			loaded, err := loadDocuments(cfg, cwd, args)
 			if err != nil {

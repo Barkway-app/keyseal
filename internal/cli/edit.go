@@ -41,6 +41,9 @@ func newEditCommand() *cobra.Command {
 					return err
 				}
 			}
+			if err := ensureSOPSAvailable(ctx.Config, ctx.CWD); err != nil {
+				return err
+			}
 			ageKeyFile := config.ResolvePath(ctx.CWD, ctx.Config.SOPS.AgeKeyFile)
 
 			target, err := repo.LogicalNameToPath(ctx.KeysealRoot, args[0], ctx.Config.Repository.EncryptedExtension)

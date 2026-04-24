@@ -14,6 +14,7 @@ const (
 	DefaultConfigPath      = "keyseal.yaml"
 	DefaultEncryptedExt    = ".enc.yaml"
 	DefaultSOPSBinary      = "sops"
+	DefaultAgeBinary       = "age"
 	DefaultAgeKeyFile      = "~/.config/sops/age/keys.txt"
 	DefaultOutputFormat    = "dotenv"
 	DefaultOutputDir       = "/run/secrets"
@@ -49,6 +50,7 @@ type RepositoryConfig struct {
 // SOPSConfig controls how Keyseal locates and invokes the external sops binary.
 type SOPSConfig struct {
 	Binary     string `yaml:"binary"`
+	AgeBinary  string `yaml:"age_binary"`
 	AgeKeyFile string `yaml:"age_key_file"`
 }
 
@@ -94,6 +96,7 @@ func Default() Config {
 		},
 		SOPS: SOPSConfig{
 			Binary:     DefaultSOPSBinary,
+			AgeBinary:  DefaultAgeBinary,
 			AgeKeyFile: DefaultAgeKeyFile,
 		},
 		Git: GitConfig{
@@ -150,6 +153,9 @@ func (c *Config) applyDefaults() {
 	if c.SOPS.Binary == "" {
 		c.SOPS.Binary = def.SOPS.Binary
 	}
+	if c.SOPS.AgeBinary == "" {
+		c.SOPS.AgeBinary = def.SOPS.AgeBinary
+	}
 	if c.SOPS.AgeKeyFile == "" {
 		c.SOPS.AgeKeyFile = def.SOPS.AgeKeyFile
 	}
@@ -186,6 +192,9 @@ func (c Config) Validate() error {
 	}
 	if c.SOPS.Binary == "" {
 		return errors.New("sops.binary is required")
+	}
+	if c.SOPS.AgeBinary == "" {
+		return errors.New("sops.age_binary is required")
 	}
 	if _, ok := allowedOutputFormats[c.Defaults.OutputFormat]; !ok {
 		return fmt.Errorf("defaults.output_format must be one of dotenv, json, yaml")

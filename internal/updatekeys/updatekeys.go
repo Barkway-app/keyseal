@@ -115,8 +115,8 @@ func Run(opts Options) (Result, error) {
 	if err := preflightSOPSConfig(opts.CWD); err != nil {
 		return result, err
 	}
-	if _, err := sopsutil.LookPath(cfg.SOPS.Binary); err != nil {
-		return result, err
+	if _, err := sopsutil.Version(cfg.SOPS.Binary, config.ResolvePath(opts.CWD, cfg.SOPS.AgeKeyFile)); err != nil {
+		return result, fmt.Errorf("configured SOPS binary %q is unavailable: %w", cfg.SOPS.Binary, err)
 	}
 
 	var gitRoot string

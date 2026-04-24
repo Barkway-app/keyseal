@@ -7,6 +7,7 @@ The format is intentionally lightweight for now and optimized for early public r
 ## Unreleased
 
 Highlights:
+- SOPS-backed commands now preflight the configured SOPS binary before decrypting or mutating files, and `keyseal doctor` now reports SOPS and age tool availability near the top of its output
 - `keyseal updatekeys` now batch-syncs SOPS recipients for Keyseal-managed encrypted files from `.sops.yaml`, with placeholder/plaintext safety checks and optional explicit commits
 - empty or whitespace-only `.enc.yaml` files are now treated as placeholder secrets so `render` and `exec` skip them when other requested secrets are usable, and fail clearly when every requested secret is still uninitialized
 - `keyseal edit` now bootstraps placeholder secret files with an encrypted starter document before opening SOPS, making recovery from empty placeholder files a first-class workflow

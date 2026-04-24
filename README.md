@@ -108,7 +108,7 @@ make build
 - `keyseal rollback <logical-name> --to <commit>` restores one secret file from Git history
 - `keyseal render <logical-name...>` decrypts, merges, and renders secret values, skipping empty placeholder files
 - `keyseal exec <logical-name...> -- <command...>` runs a child process with merged env vars, skipping empty placeholder files
-- `keyseal doctor` validates config sanity, `.sops.yaml` readiness, placeholder recipients, SOPS availability, plaintext mistakes, empty placeholders, and decrypted document shape
+- `keyseal doctor` validates config sanity, SOPS availability, age availability warnings, `.sops.yaml` readiness, placeholder recipients, plaintext mistakes, empty placeholders, and decrypted document shape
 - `keyseal version` reports version, commit, and build date metadata
 
 Detailed flags, examples, and behavior notes live in the wiki:
@@ -134,6 +134,7 @@ repository:
 
 sops:
   binary: sops
+  age_binary: age
   age_key_file: ~/.config/sops/age/keys.txt
 
 git:
@@ -177,6 +178,7 @@ Key workflow details:
 - `-m, --message` implies commit on mutating commands
 - `git.auto_commit` is off by default
 - `sops.age_key_file` is used as the default age key path unless `SOPS_AGE_KEY_FILE` is already set
+- SOPS-backed commands check the configured `sops.binary` before decrypting or mutating secret files
 - `updatekeys` uses `.sops.yaml` as the recipient source of truth and does not rotate secret values or data encryption keys
 - `keyseal commit` stages only Keyseal-managed files, not the whole repo
 - `rollback` restores the encrypted file from Git history, while `--dry-run` previews safely without modifying the working tree

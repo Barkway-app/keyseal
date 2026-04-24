@@ -195,7 +195,7 @@ func TestUpdateKeysPreflightFailsWhenSOPSMissing(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected missing sops to fail")
 	}
-	if !strings.Contains(err.Error(), "sops binary not found") {
+	if !strings.Contains(err.Error(), "binary not found") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	body := readCLIFile(t, filepath.Join(repoRoot, "production/platform/app.enc.yaml"))
@@ -321,7 +321,7 @@ func configureFakeUpdateKeysSOPS(t *testing.T, root string, mutate bool) {
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll returned error: %v", err)
 	}
-	script := "#!/bin/sh\nif [ \"$1\" = \"updatekeys\" ]; then\n  target=\"$2\"\n  if [ \"$2\" = \"-y\" ]; then target=\"$3\"; fi\n"
+	script := "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  printf 'sops 3.9.0\\n'\n  exit 0\nfi\nif [ \"$1\" = \"updatekeys\" ]; then\n  target=\"$2\"\n  if [ \"$2\" = \"-y\" ]; then target=\"$3\"; fi\n"
 	if mutate {
 		script += "  printf '# updated-by-fake-sops\\n' >> \"$target\"\n"
 	}
@@ -339,7 +339,7 @@ func configureFakeUpdateKeysRecorderSOPS(t *testing.T, root string) string {
 		t.Fatalf("MkdirAll returned error: %v", err)
 	}
 	argsPath := filepath.Join(root, "sops-args.txt")
-	script := "#!/bin/sh\nprintf '%s\\n' \"$*\" > \"" + argsPath + "\"\nif [ \"$1\" = \"updatekeys\" ]; then exit 0; fi\nexit 1\n"
+	script := "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  printf 'sops 3.9.0\\n'\n  exit 0\nfi\nprintf '%s\\n' \"$*\" > \"" + argsPath + "\"\nif [ \"$1\" = \"updatekeys\" ]; then exit 0; fi\nexit 1\n"
 	writeFakeSOPS(t, filepath.Join(binDir, "sops"), script)
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+gitBinDir(t))
 	return argsPath

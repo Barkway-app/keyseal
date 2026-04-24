@@ -15,6 +15,7 @@ import (
 	"github.com/Barkway-app/keyseal/internal/secretfile"
 	"github.com/Barkway-app/keyseal/internal/sopsconfig"
 	"github.com/Barkway-app/keyseal/internal/sopsutil"
+	"github.com/Barkway-app/keyseal/internal/toolcheck"
 )
 
 // Run executes the doctor checks for the current repository.
@@ -22,9 +23,17 @@ func Run(cwd string) (Result, error) {
 	var result Result
 
 	cfg, cfgOK := runConfigChecks(cwd, &result)
-	runSOPSConfigChecks(cwd, &result)
-
-	if !cfgOK {
+	if cfgOK {
+		// Tool checks depend on keyseal.yaml values, but users need missing
+		// binaries surfaced before lower-priority repository details.
+		configCheck := result.Checks[0]
+		result.Checks = result.Checks[:0]
+		runSOPSBinaryChecks(cfg, cwd, &result)
+		runAgeBinaryChecks(cfg, &result)
+		result.Add(configCheck)
+		runSOPSConfigChecks(cwd, &result)
+	} else {
+		runSOPSConfigChecks(cwd, &result)
 		result.Add(CheckResult{
 			Name:     "secret validation",
 			Status:   StatusSkip,
@@ -42,7 +51,7 @@ func Run(cwd string) (Result, error) {
 	runOutputPathChecks(cfg, &result)
 	runRepoArtifactChecks(repoRoot, &result)
 
-	sopsAvailable := runSOPSBinaryChecks(cfg, cwd, &result)
+	sopsAvailable := sopsBinaryAvailable(result)
 	if !repoRootReady {
 		result.Add(CheckResult{
 			Name:     "secret discovery",
@@ -60,6 +69,17 @@ func Run(cwd string) (Result, error) {
 		return result, fmt.Errorf("run secret checks: %w", err)
 	}
 	return result, nil
+}
+
+// sopsBinaryAvailable reports whether the earlier doctor SOPS binary check was
+// successful enough for decrypt validation to proceed.
+func sopsBinaryAvailable(result Result) bool {
+	for _, check := range result.Checks {
+		if check.Name == "sops binary" {
+			return check.Status == StatusOK || check.Status == StatusWarn
+		}
+	}
+	return false
 }
 
 func runConfigChecks(cwd string, result *Result) (config.Config, bool) {
@@ -414,6 +434,52 @@ func runSOPSBinaryChecks(cfg config.Config, cwd string, result *Result) bool {
 	}
 	result.Add(CheckResult{
 		Name:     "sops binary",
+		Status:   status,
+		Severity: severity,
+		Summary:  summary,
+		Details:  details,
+	})
+	return true
+}
+
+// runAgeBinaryChecks warns when the configured age binary is unavailable so
+// age-based repositories can catch local setup issues early.
+func runAgeBinaryChecks(cfg config.Config, result *Result) bool {
+	binary := cfg.SOPS.AgeBinary
+	probe, err := toolcheck.Probe(binary, nil, "--version")
+	if err != nil {
+		result.Add(CheckResult{
+			Name:     "age binary",
+			Status:   StatusWarn,
+			Severity: SeverityWarning,
+			Summary:  "Configured age binary could not be resolved or executed",
+			Details: []string{
+				fmt.Sprintf("Configured value: %q", binary),
+				fmt.Sprintf("Lookup or version error: %v", err),
+				"Keyseal delegates encryption to SOPS, but the default repository template uses age recipients.",
+			},
+			Remediation: []string{
+				fmt.Sprintf("Install age and make %q available in PATH, or update sops.age_binary in keyseal.yaml.", binary),
+			},
+		})
+		return false
+	}
+
+	details := []string{
+		fmt.Sprintf("Resolved path: %s", probe.Resolved),
+	}
+	status := StatusOK
+	severity := SeverityInformational
+	summary := "age binary is available"
+	if probe.Version != "" {
+		details = append(details, fmt.Sprintf("Version: %s", probe.Version))
+	} else {
+		status = StatusWarn
+		severity = SeverityWarning
+		summary = "age binary is available, but version output was empty"
+	}
+	result.Add(CheckResult{
+		Name:     "age binary",
 		Status:   status,
 		Severity: severity,
 		Summary:  summary,

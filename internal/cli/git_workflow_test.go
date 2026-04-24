@@ -372,7 +372,7 @@ func configureFakeEncryptSOPS(t *testing.T, root string) {
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll returned error: %v", err)
 	}
-	writeFakeSOPS(t, filepath.Join(binDir, "sops"), "#!/bin/sh\nif [ \"$1\" = \"encrypt\" ] && [ \"$2\" = \"--filename-override\" ]; then\n  printf 'ENC[test]\\n'\n  exit 0\nfi\nexit 1\n")
+	writeFakeSOPS(t, filepath.Join(binDir, "sops"), "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  printf 'sops 3.9.0\\n'\n  exit 0\nfi\nif [ \"$1\" = \"encrypt\" ] && [ \"$2\" = \"--filename-override\" ]; then\n  printf 'ENC[test]\\n'\n  exit 0\nfi\nexit 1\n")
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+gitBinDir(t))
 }
 
@@ -383,7 +383,7 @@ func configureFakeEditSOPS(t *testing.T, root, script string) {
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll returned error: %v", err)
 	}
-	writeFakeSOPS(t, filepath.Join(binDir, "sops"), script)
+	writeFakeSOPS(t, filepath.Join(binDir, "sops"), "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  printf 'sops 3.9.0\\n'\n  exit 0\nfi\n"+script)
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+gitBinDir(t))
 }
 

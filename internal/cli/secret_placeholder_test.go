@@ -128,7 +128,7 @@ func configureFakeEditBootstrapSOPS(t *testing.T, root string) {
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll returned error: %v", err)
 	}
-	writeFakeSOPS(t, filepath.Join(binDir, "sops"), "#!/bin/sh\nif [ \"$1\" = \"encrypt\" ] && [ \"$2\" = \"--filename-override\" ]; then\n  printf 'version: 1\\nkind: env\\nname: ENC[test]\\nvalues:\\n  EXAMPLE_KEY: ENC[test]\\nsops:\\n  version: 3.9.0\\n'\n  exit 0\nfi\nprintf 'edited\\n' >> \"$1\"\n")
+	writeFakeSOPS(t, filepath.Join(binDir, "sops"), "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  printf 'sops 3.9.0\\n'\n  exit 0\nfi\nif [ \"$1\" = \"encrypt\" ] && [ \"$2\" = \"--filename-override\" ]; then\n  printf 'version: 1\\nkind: env\\nname: ENC[test]\\nvalues:\\n  EXAMPLE_KEY: ENC[test]\\nsops:\\n  version: 3.9.0\\n'\n  exit 0\nfi\nprintf 'edited\\n' >> \"$1\"\n")
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 

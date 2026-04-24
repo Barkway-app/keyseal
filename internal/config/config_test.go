@@ -29,6 +29,9 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	if cfg.Git.AutoCommit {
 		t.Fatal("expected git.auto_commit to default to false")
 	}
+	if cfg.SOPS.AgeBinary != "age" {
+		t.Fatalf("expected default age binary, got %q", cfg.SOPS.AgeBinary)
+	}
 	if cfg.Validation.KeyPattern != "^[A-Z0-9_]+$" {
 		t.Fatalf("expected default key pattern, got %q", cfg.Validation.KeyPattern)
 	}

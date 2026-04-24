@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/Barkway-app/keyseal/internal/toolcheck"
 )
 
 const ageKeyEnvVar = "SOPS_AGE_KEY_FILE"
@@ -18,7 +20,7 @@ var ErrBinaryNotFound = errors.New("sops binary not found")
 
 // LookPath resolves the configured sops binary in PATH.
 func LookPath(binary string) (string, error) {
-	path, err := exec.LookPath(binary)
+	path, err := toolcheck.Resolve(binary)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrBinaryNotFound, binary)
 	}
@@ -70,27 +72,11 @@ func EditFile(binary, ageKeyFile, path string) error {
 
 // Version returns the first non-empty line from `sops --version`.
 func Version(binary, ageKeyFile string) (string, error) {
-	if _, err := LookPath(binary); err != nil {
+	result, err := toolcheck.Probe(binary, commandEnv(ageKeyFile), "--version")
+	if err != nil {
 		return "", err
 	}
-	cmd := exec.Command(binary, "--version")
-	cmd.Env = commandEnv(ageKeyFile)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("run sops --version: %s", sanitizeOutput(stderr.Bytes(), stdout.Bytes()))
-	}
-	for _, candidate := range []string{stdout.String(), stderr.String()} {
-		for _, line := range strings.Split(candidate, "\n") {
-			line = strings.TrimSpace(line)
-			if line != "" {
-				return line, nil
-			}
-		}
-	}
-	return "", nil
+	return result.Version, nil
 }
 
 // EncryptFile encrypts plaintext by writing it to a secure temp file and

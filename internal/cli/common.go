@@ -74,6 +74,16 @@ func loadDocuments(cfg config.Config, cwd string, logicalNames []string) (loaded
 	return result, nil
 }
 
+// ensureSOPSAvailable verifies that the configured SOPS binary resolves and
+// executes before a command starts decrypting or mutating secret files.
+func ensureSOPSAvailable(cfg config.Config, cwd string) error {
+	ageKeyFile := config.ResolvePath(cwd, cfg.SOPS.AgeKeyFile)
+	if _, err := sopsutil.Version(cfg.SOPS.Binary, ageKeyFile); err != nil {
+		return fmt.Errorf("configured SOPS binary %q is unavailable: %w", cfg.SOPS.Binary, err)
+	}
+	return nil
+}
+
 // gitWorkflowContext collects the Keyseal and Git roots needed to safely map
 // logical names, config files, and Git pathspecs without re-deriving them in
 // each command.

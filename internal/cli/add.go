@@ -44,6 +44,9 @@ func newAddCommand() *cobra.Command {
 			}
 			cfg := ctx.Config
 			root := ctx.KeysealRoot
+			if err := ensureSOPSAvailable(cfg, ctx.CWD); err != nil {
+				return err
+			}
 			ageKeyFile := config.ResolvePath(ctx.CWD, cfg.SOPS.AgeKeyFile)
 			commitDecision, err := resolveCommitDecision(cmd, cfg, commitConfig)
 			if err != nil {

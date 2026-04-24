@@ -36,6 +36,9 @@ func newExecCommand() *cobra.Command {
 				return err
 			}
 			sep := cmd.ArgsLenAtDash()
+			if err := ensureSOPSAvailable(cfg, cwd); err != nil {
+				return err
+			}
 			loaded, err := loadDocuments(cfg, cwd, args[:sep])
 			if err != nil {
 				return err
