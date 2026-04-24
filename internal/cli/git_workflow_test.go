@@ -13,7 +13,7 @@ func TestRootHelpIncludesGitWorkflowCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("runRootCommand returned error: %v", err)
 	}
-	for _, snippet := range []string{"status", "diff", "history", "commit", "rollback"} {
+	for _, snippet := range []string{"status", "diff", "history", "commit", "updatekeys", "rollback"} {
 		if !strings.Contains(output, snippet) {
 			t.Fatalf("expected root help to mention %q, got %q", snippet, output)
 		}

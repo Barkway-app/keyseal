@@ -100,6 +100,7 @@ make build
 - `keyseal init` bootstraps a repository layout, `keyseal.yaml`, and `.sops.yaml`
 - `keyseal add <logical-name>` creates and encrypts a starter env secret document at the final `.enc.yaml` path, with optional immediate Git commit support
 - `keyseal edit <logical-name>` opens the target file with `sops`, bootstrapping empty placeholder files first when needed
+- `keyseal updatekeys [logical-name...]` syncs SOPS recipients from `.sops.yaml` for encrypted files, with optional explicit Git commit support
 - `keyseal status [logical-name]` shows Git status for Keyseal-managed files, optionally narrowed to one secret
 - `keyseal diff <logical-name>` shows `git diff` for one secret file
 - `keyseal history <logical-name>` shows file-scoped Git history for one secret file, with optional `--oneline` output
@@ -162,6 +163,7 @@ For full schema and config details, see:
 ```bash
 keyseal add production/platform/app --template laravel
 keyseal edit production/platform/app
+keyseal updatekeys production/platform/app --yes
 keyseal status production/platform/app
 keyseal history production/platform/app --oneline
 keyseal commit -m "Update production app secret"
@@ -175,6 +177,7 @@ Key workflow details:
 - `-m, --message` implies commit on mutating commands
 - `git.auto_commit` is off by default
 - `sops.age_key_file` is used as the default age key path unless `SOPS_AGE_KEY_FILE` is already set
+- `updatekeys` uses `.sops.yaml` as the recipient source of truth and does not rotate secret values or data encryption keys
 - `keyseal commit` stages only Keyseal-managed files, not the whole repo
 - `rollback` restores the encrypted file from Git history, while `--dry-run` previews safely without modifying the working tree
 

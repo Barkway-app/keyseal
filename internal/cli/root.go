@@ -37,6 +37,7 @@ func newRootCommand() *cobra.Command {
 			"  keyseal history production/platform/app\n" +
 			"  keyseal commit -m \"Rotate Stripe webhook secret\"\n" +
 			"  keyseal edit production/platform/app\n" +
+			"  keyseal updatekeys --all --yes\n" +
 			"  keyseal rollback production/platform/app --to abc1234 --dry-run\n" +
 			"  keyseal render production/platform/app --stdout\n" +
 			"  keyseal exec production/platform/app -- env | grep APP_\n" +
@@ -63,6 +64,7 @@ func newRootCommand() *cobra.Command {
 		newDiffCommand(),
 		newHistoryCommand(),
 		newCommitCommand(),
+		newUpdateKeysCommand(),
 		newRollbackCommand(),
 		newRenderCommand(),
 		newExecCommand(),

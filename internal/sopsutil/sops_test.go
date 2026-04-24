@@ -181,3 +181,71 @@ func TestDecryptFilePrefersExistingAgeKeyEnv(t *testing.T) {
 		t.Fatalf("expected env override to win, got %q", string(out))
 	}
 }
+
+// TestUpdateKeysPassesYesFlagWhenRequested verifies that non-interactive mode
+// passes -y through to SOPS.
+func TestUpdateKeysPassesYesFlagWhenRequested(t *testing.T) {
+	dir := t.TempDir()
+	binDir := filepath.Join(dir, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+
+	argsPath := filepath.Join(dir, "args.txt")
+	scriptPath := filepath.Join(binDir, "fake-sops")
+	script := "#!/bin/sh\nprintf '%s\\n' \"$*\" > \"" + argsPath + "\"\nexit 0\n"
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake sops: %v", err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	secretPath := filepath.Join(dir, "app.enc.yaml")
+	if err := os.WriteFile(secretPath, []byte("sops:\n  version: 3.9.0\n"), 0o600); err != nil {
+		t.Fatalf("write secret: %v", err)
+	}
+
+	if err := sopsutil.UpdateKeys("fake-sops", "", secretPath, true); err != nil {
+		t.Fatalf("UpdateKeys returned error: %v", err)
+	}
+	body, err := os.ReadFile(argsPath)
+	if err != nil {
+		t.Fatalf("ReadFile returned error: %v", err)
+	}
+	if !strings.Contains(string(body), "updatekeys -y "+secretPath) {
+		t.Fatalf("expected -y in args, got %q", string(body))
+	}
+}
+
+// TestUpdateKeysOmitsYesFlagByDefault verifies that interactive mode invokes
+// SOPS without the non-interactive confirmation flag.
+func TestUpdateKeysOmitsYesFlagByDefault(t *testing.T) {
+	dir := t.TempDir()
+	binDir := filepath.Join(dir, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+
+	argsPath := filepath.Join(dir, "args.txt")
+	scriptPath := filepath.Join(binDir, "fake-sops")
+	script := "#!/bin/sh\nprintf '%s\\n' \"$*\" > \"" + argsPath + "\"\nexit 0\n"
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake sops: %v", err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	secretPath := filepath.Join(dir, "app.enc.yaml")
+	if err := os.WriteFile(secretPath, []byte("sops:\n  version: 3.9.0\n"), 0o600); err != nil {
+		t.Fatalf("write secret: %v", err)
+	}
+
+	if err := sopsutil.UpdateKeys("fake-sops", "", secretPath, false); err != nil {
+		t.Fatalf("UpdateKeys returned error: %v", err)
+	}
+	body, err := os.ReadFile(argsPath)
+	if err != nil {
+		t.Fatalf("ReadFile returned error: %v", err)
+	}
+	if string(body) != "updatekeys "+secretPath+"\n" {
+		t.Fatalf("expected default args without -y, got %q", string(body))
+	}
+}

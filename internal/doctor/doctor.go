@@ -13,6 +13,7 @@ import (
 	"github.com/Barkway-app/keyseal/internal/repo"
 	"github.com/Barkway-app/keyseal/internal/schema"
 	"github.com/Barkway-app/keyseal/internal/secretfile"
+	"github.com/Barkway-app/keyseal/internal/sopsconfig"
 	"github.com/Barkway-app/keyseal/internal/sopsutil"
 )
 
@@ -271,7 +272,7 @@ func runSOPSConfigChecks(cwd string, result *Result) {
 		return
 	}
 
-	info, err := inspectSOPSConfig(data)
+	info, err := sopsconfig.Inspect(data)
 	if err != nil {
 		result.Add(CheckResult{
 			Name:     ".sops.yaml",
