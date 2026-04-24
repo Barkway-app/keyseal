@@ -4,7 +4,9 @@ All notable changes to Keyseal will be documented in this file.
 
 The format is intentionally lightweight for now and optimized for early public release tags.
 
-## Unreleased
+## v0.3.0
+
+Tightens up Keyseal's day-to-day secret handling, especially around empty placeholders, SOPS checks, and keeping encrypted files in sync when recipients change.
 
 Highlights:
 - SOPS-backed commands now preflight the configured SOPS binary before decrypting or mutating files, and `keyseal doctor` now reports SOPS and age tool availability near the top of its output

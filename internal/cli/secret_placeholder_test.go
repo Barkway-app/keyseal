@@ -29,6 +29,7 @@ func TestRenderSkipsEmptyPlaceholderWhenOtherSecretsAreUsable(t *testing.T) {
 func TestRenderFailsWhenAllRequestedSecretsAreEmptyPlaceholders(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeTestConfig(t, repoRoot)
+	configureVersionOnlySOPS(t, repoRoot)
 	writeCLIFile(t, filepath.Join(repoRoot, "production/platform/empty.enc.yaml"), "\n \t \n")
 
 	_, err := runRootCommand(t, repoRoot, "render", "production/platform/empty", "--stdout")
@@ -76,6 +77,7 @@ func TestExecSkipsEmptyPlaceholderWhenOtherSecretsAreUsable(t *testing.T) {
 func TestExecFailsWhenAllRequestedSecretsAreEmptyPlaceholders(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeTestConfig(t, repoRoot)
+	configureVersionOnlySOPS(t, repoRoot)
 	writeCLIFile(t, filepath.Join(repoRoot, "production/platform/empty.enc.yaml"), " \n")
 
 	_, err := runRootCommand(t, repoRoot, "exec", "production/platform/empty", "--", "/bin/sh", "-c", "exit 0")
@@ -118,6 +120,17 @@ func configureDecryptOnlySOPS(t *testing.T, root string) {
 		t.Fatalf("MkdirAll returned error: %v", err)
 	}
 	writeFakeSOPS(t, filepath.Join(binDir, "sops"), "#!/bin/sh\nif [ \"$1\" = \"--decrypt\" ]; then\n  case \"$2\" in\n    *app.enc.yaml)\n      printf 'version: 1\\nkind: env\\nname: production/platform/app\\nvalues:\\n  APP_ENV: production\\n'\n      exit 0\n      ;;\n  esac\nfi\nif [ \"$1\" = \"--version\" ]; then\n  printf 'sops 3.9.0\\n'\n  exit 0\nfi\nexit 1\n")
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func configureVersionOnlySOPS(t *testing.T, root string) {
+	t.Helper()
+
+	binDir := filepath.Join(root, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+	writeFakeSOPS(t, filepath.Join(binDir, "sops"), "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  printf 'sops 3.9.0\\n'\n  exit 0\nfi\nexit 1\n")
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 
