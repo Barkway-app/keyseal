@@ -36,9 +36,8 @@ func newExecCommand() *cobra.Command {
 				return err
 			}
 			sep := cmd.ArgsLenAtDash()
-			if err := ensureSOPSAvailable(cfg, cwd); err != nil {
-				return err
-			}
+			// Like render, exec only needs library decrypt and age key material;
+			// it should stay usable on deploy hosts without the sops CLI.
 			loaded, err := loadDocuments(cfg, cwd, args[:sep])
 			if err != nil {
 				return err

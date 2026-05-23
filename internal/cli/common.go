@@ -54,7 +54,7 @@ func loadDocuments(cfg config.Config, cwd string, logicalNames []string) (loaded
 		case secretfile.StatePlaintext:
 			return loadedDocuments{}, fmt.Errorf("secret %s is non-empty plaintext at encrypted path %s: file does not contain SOPS metadata", logical, path)
 		}
-		plaintext, err := sopsutil.DecryptFile(cfg.SOPS.Binary, ageKeyFile, path)
+		plaintext, err := sopsutil.DecryptFile(path, "yaml", ageKeyFile)
 		if err != nil {
 			return loadedDocuments{}, err
 		}
@@ -75,7 +75,7 @@ func loadDocuments(cfg config.Config, cwd string, logicalNames []string) (loaded
 }
 
 // ensureSOPSAvailable verifies that the configured SOPS binary resolves and
-// executes before a command starts decrypting or mutating secret files.
+// executes before a command starts mutating encrypted files.
 func ensureSOPSAvailable(cfg config.Config, cwd string) error {
 	ageKeyFile := config.ResolvePath(cwd, cfg.SOPS.AgeKeyFile)
 	if _, err := sopsutil.Version(cfg.SOPS.Binary, ageKeyFile); err != nil {

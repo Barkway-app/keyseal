@@ -28,20 +28,6 @@ func TestSOPSBackedCommandsFailEarlyWhenSOPSMissing(t *testing.T) {
 			args: []string{"edit", "production/platform/app"},
 		},
 		{
-			name: "render",
-			setup: func(t *testing.T, root string) {
-				writeEncryptedFixture(t, root, "production/platform/app.enc.yaml")
-			},
-			args: []string{"render", "production/platform/app", "--stdout"},
-		},
-		{
-			name: "exec",
-			setup: func(t *testing.T, root string) {
-				writeEncryptedFixture(t, root, "production/platform/app.enc.yaml")
-			},
-			args: []string{"exec", "production/platform/app", "--", "/bin/sh", "-c", "exit 0"},
-		},
-		{
 			name: "updatekeys",
 			setup: func(t *testing.T, root string) {
 				writeValidSOPSConfig(t, root)
@@ -68,6 +54,43 @@ func TestSOPSBackedCommandsFailEarlyWhenSOPSMissing(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestReadOnlyCommandsDoNotRequireSOPSOrAgeBinaries verifies server/deploy
+// hosts can decrypt with only Keyseal, encrypted files, and age key material.
+func TestReadOnlyCommandsDoNotRequireSOPSOrAgeBinaries(t *testing.T) {
+	t.Run("render", func(t *testing.T) {
+		root := seedKeysealRepo(t, false)
+		writeEncryptedFixture(t, root, "production/platform/app.enc.yaml")
+		t.Setenv("PATH", gitOnlyPathDir(t))
+
+		output, err := runRootCommand(t, root, "render", "production/platform/app", "--stdout")
+		if err != nil {
+			t.Fatalf("render should not require external sops or age binaries: %v", err)
+		}
+		if !strings.Contains(output, "APP_ENV=\"production\"") {
+			t.Fatalf("expected decrypted dotenv output, got %q", output)
+		}
+	})
+
+	t.Run("exec", func(t *testing.T) {
+		root := seedKeysealRepo(t, false)
+		writeEncryptedFixture(t, root, "production/platform/app.enc.yaml")
+		t.Setenv("PATH", gitOnlyPathDir(t))
+		outPath := filepath.Join(root, "child-output.txt")
+
+		_, err := runRootCommand(t, root, "exec", "production/platform/app", "--", "/bin/sh", "-c", "printf %s \"$APP_ENV\" > \"$1\"", "sh", outPath)
+		if err != nil {
+			t.Fatalf("exec should not require external sops or age binaries: %v", err)
+		}
+		body, err := os.ReadFile(outPath)
+		if err != nil {
+			t.Fatalf("ReadFile returned error: %v", err)
+		}
+		if string(body) != "production" {
+			t.Fatalf("expected child process to receive APP_ENV, got %q", string(body))
+		}
+	})
 }
 
 // TestExplicitSOPSBinaryPathWorks verifies keyseal.yaml can point directly at

@@ -147,7 +147,8 @@ func configureFakeEditBootstrapSOPS(t *testing.T, root string) {
 
 func writeEncryptedFixture(t *testing.T, root, rel string) {
 	t.Helper()
-	writeCLIFile(t, filepath.Join(root, rel), "version: 1\nkind: env\nname: ENC[test]\nvalues:\n  APP_ENV: ENC[test]\nsops:\n  version: 3.9.0\n")
+	configureLibraryDecryptFixture(t, root)
+	writeCLIFile(t, filepath.Join(root, rel), cliTestEncryptedYAML)
 }
 
 func writeCLIFile(t *testing.T, path, body string) {

@@ -47,7 +47,10 @@ type RepositoryConfig struct {
 	EncryptedExtension string `yaml:"encrypted_extension"`
 }
 
-// SOPSConfig controls how Keyseal locates and invokes the external sops binary.
+// SOPSConfig controls SOPS CLI mutation settings and age key discovery.
+//
+// Read-only decrypt operations use the SOPS Go library, so Binary is required
+// only for commands that create, edit, or rotate encrypted files.
 type SOPSConfig struct {
 	Binary     string `yaml:"binary"`
 	AgeBinary  string `yaml:"age_binary"`
