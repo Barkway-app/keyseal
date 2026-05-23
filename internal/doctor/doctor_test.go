@@ -9,6 +9,64 @@ import (
 	"github.com/Barkway-app/keyseal/internal/doctor"
 )
 
+const doctorAgeKey = `# created: 2026-05-23T08:04:13+01:00
+# public key: age1xlp99sh4c9dheuskt900y83mdcxdhjp0zhejf2l4lkh6fdzl0dsqsx4yrx
+AGE-SECRET-KEY-1640MNDQ274MATFJR6D6R6GFW3FUDJLDUAM84TXRM9L70FUCEXV0QMEH0CE
+`
+
+const doctorWrongAgeKey = `# created: 2026-05-23T08:06:59+01:00
+# public key: age1e82vhfhpxva6rxz8nql5wfd6k9pp7w30xtjmc0r2ezy49keaeursygjxza
+AGE-SECRET-KEY-125U2KVSRWTT7PLRZ7M25U3SQ3RHX5ZEH3X8PEZ4Z60G94JUKJH7S99EM69
+`
+
+const doctorEncryptedYAML = `version: 1
+kind: env
+name: ENC[AES256_GCM,data:Riq9aP5zSklrQVihLs8Z6cyGFoTx9m8=,iv:afiJHqzI77QqsAAPUTkTo2x9NFHIAtVwUhZqso2SUHY=,tag:Tr1eyGNfEykmeP0NsEEeTQ==,type:str]
+values:
+    APP_ENV: ENC[AES256_GCM,data:EkOfgsyFrpZH4g==,iv:avltATTRTS4vEsXi1IISZD0zo/4+M+Wx/3hOL3tbj+I=,tag:uzT57+ASpUVueI0RjudbPA==,type:str]
+    DB_HOST: ENC[AES256_GCM,data:CyE=,iv:wUXVOYuWG9bcInf5CS3B7nUZMYXwYxveTWs5bbZdB6c=,tag:2LNNfJcBu5MFFyzot71UiA==,type:str]
+sops:
+    age:
+        - recipient: age1xlp99sh4c9dheuskt900y83mdcxdhjp0zhejf2l4lkh6fdzl0dsqsx4yrx
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSByUmNYSUREdEhrSlZ6a2pt
+            SUtKZjMrOHNCc2l6TEdLRTErbWRTK0hTWkcwCjVuMmJucC93WWQzVnBoMllnWGdq
+            ZGNPS3dEbThVMGtpc2VPQXo3cDZaTE0KLS0tIDZEeU1hK3d5UVZDWllBZXlnU2x5
+            R2orSW1LR3pyMllDZVJYR1lEazVMbzgKk6v8JQFsBbZZ7H2Jrm3wW7Stz/fc4Xws
+            eDgyjtDkBhCCLjYpMh7MZoS9ryZ0YQWXquEhJIR4fZtqmCrNf5T3Xw==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-05-23T07:04:13Z"
+    mac: ENC[AES256_GCM,data:wbWeTqecwI4WPC0QEuJv+4POBdepZoUwnsx7qF7RLpGspMrqXAqNzMF3IVd0HVIeupWHDi42s1t6MNfTE/5adIyprH3+3Vrc900hmRGFzKERMIwATUhqgtKkhO50YQ7CGX5blevr21Jadce56Q+cXJs+rv/criVcf5V0zrhEhDo=,iv:7xhnkpYcJgtnz1jkhHW/tuZ7F4xfSJfb9/MBrW7XFGs=,tag:LZW2wKKLgMXuftGAlqiHtQ==,type:str]
+    encrypted_regex: ^(name|values)$
+    version: 3.12.2
+`
+
+const doctorWarningEncryptedYAML = `version: ENC[AES256_GCM,data:Dw==,iv:aSzwJu06+uKzROt6MjQaTGAiRwY8F45vLyzi4obAhso=,tag:RCljtMpsFYxM+Ykv7WWdKA==,type:int]
+kind: ENC[AES256_GCM,data:WGuj,iv:6NrOkkSg+iXaaMneWbIWP3HG4n6xQ+SohzA2ChwAhSU=,tag:xxYoqiV/pmW4/y8zvIV+lA==,type:str]
+name: ENC[AES256_GCM,data:4AmnoUFpetdRdE9PLqZopUilnJkmYEI=,iv:OIJ7h2CfteteX3Ou7KJ5uDbD+rAd/ycSQtbCH8b3yvk=,tag:oahY3RiZJjI/9LKxTmfpvQ==,type:str]
+values:
+    APP_ENV: ENC[AES256_GCM,data:z1t/XVtsFjOAqA==,iv:cSZjKsjurrPhon3vI8Q2d/BwLgNISpqOBusOuicm0DE=,tag:qmmVLmGiJfcyd4Y6+4bVTA==,type:str]
+    DB_HOST: ENC[AES256_GCM,data:xt8=,iv:A30J5QFTPR5WLBeOyLUXh7iiYwkhBoObeXINN7q76hQ=,tag:19/36OzjY0o6/Un90/79Vw==,type:str]
+sops:
+    age:
+        - recipient: age1xlp99sh4c9dheuskt900y83mdcxdhjp0zhejf2l4lkh6fdzl0dsqsx4yrx
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBNeXBIZ1VVTnloRDdCM3Jv
+            ODVGWFFJSzlWSnJxaDJiMjdJcGZJWHp0VVZrCkxjZkRkQlpXN1M4aEozQjFwMU5U
+            d1ZCYitSa1R0cG0vb3R5TXNyeXRBN3MKLS0tIGcxb05DbG1XUmtBbUMvNXUrd0Iz
+            V0ozekZONHRTZi92YWxTSHBCdmxCa2sKyV77QE0g/61NjFbbTVd06EHnBZ3EmvjX
+            e57v2e4e1uZ/mZGWGBgcd5qcKyHglUaW1X9k6M5fPY2B/AGmovPzaw==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-05-23T07:44:14Z"
+    mac: ENC[AES256_GCM,data:XubQV2tkljUIbuDLv/sRTe4MUaagJ6EMmGi12ULFiqsmOV75Hn/bunl0ZEOPUhgTWhPgu4OPhi4s/tpYC5+GeyoNzP+KAD7DAg9UlX+H1YLtC8ISEfRIwzav191XC3UpW7yAw6v27oZ1LwaQ2nqEA6J5nyYH2Qu0V0V/zm+D3gg=,iv:NZMsExVfmsfBV1romlSNlj9c6ogDKob2m3tc6wj45qg=,tag:tROwg6mbnV4UKcGcbd202A==,type:str]
+    unencrypted_suffix: _unencrypted
+    version: 3.12.2
+
+# dry-run smoke marker
+`
+
 func TestDoctorRunHappyPath(t *testing.T) {
 	dir := t.TempDir()
 	writeFakeSOPS(t, dir, "fake-sops", "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  echo 'sops 3.9.0'\n  exit 0\nfi\nif [ \"$1\" = \"--decrypt\" ]; then\n  printf 'version: 1\\nkind: env\\nname: production/platform/app\\nvalues:\\n  APP_ENV: production\\n'\n  exit 0\nfi\nexit 0\n")
@@ -102,15 +160,18 @@ func TestDoctorReportsSOPSBinaryBeforeSOPSConfig(t *testing.T) {
 	if result.Checks[0].Name != "sops binary" || result.Checks[1].Name != "age binary" || result.Checks[2].Name != "keyseal.yaml" {
 		t.Fatalf("expected tool checks immediately after config, got %#v", result.Checks[:3])
 	}
-	if result.Checks[0].Status != doctor.StatusFail {
-		t.Fatalf("expected missing SOPS to fail, got %#v", result.Checks[0])
+	if result.Checks[0].Status != doctor.StatusOK {
+		t.Fatalf("expected missing SOPS to be informational for read-only checks, got %#v", result.Checks[0])
 	}
-	if !containsSubstring(result.Checks[0].Remediation, "sops.binary") {
+	if !containsSubstring(result.Checks[0].Details, "Read-only") {
+		t.Fatalf("expected read-only detail, got %#v", result.Checks[0].Details)
+	}
+	if !containsSubstring(result.Checks[0].Remediation, "mutating commands") {
 		t.Fatalf("expected sops.binary remediation, got %#v", result.Checks[0].Remediation)
 	}
 }
 
-func TestDoctorWarnsWhenAgeBinaryMissing(t *testing.T) {
+func TestDoctorReportsAgeBinaryMissingAsInformational(t *testing.T) {
 	dir := t.TempDir()
 	writeFakeSOPS(t, dir, "fake-sops", "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  echo 'sops 3.9.0'\n  exit 0\nfi\nexit 0\n")
 	writeDoctorConfigWithAge(t, dir, "fake-sops", "missing-age", "0600")
@@ -121,11 +182,11 @@ func TestDoctorWarnsWhenAgeBinaryMissing(t *testing.T) {
 		t.Fatalf("Run returned error: %v", err)
 	}
 	check := findCheck(t, result, "age binary")
-	if check.Status != doctor.StatusWarn {
-		t.Fatalf("expected missing age to warn, got %#v", check)
+	if check.Status != doctor.StatusOK {
+		t.Fatalf("expected missing age CLI to be informational, got %#v", check)
 	}
-	if !containsSubstring(check.Remediation, "sops.age_binary") {
-		t.Fatalf("expected sops.age_binary remediation, got %#v", check.Remediation)
+	if !containsSubstring(check.Details, "age private key material") {
+		t.Fatalf("expected age key material detail, got %#v", check.Details)
 	}
 	if result.HasFailures() {
 		t.Fatalf("did not expect missing age warning to fail doctor, got %#v", result.Checks)
@@ -226,7 +287,7 @@ func TestDoctorWarnsOnWhitespaceOnlyPlaceholderSecretFiles(t *testing.T) {
 	}
 }
 
-func TestDoctorSkipsDecryptValidationWhenSOPSMissing(t *testing.T) {
+func TestDoctorDecryptsWithLibraryWhenSOPSMissing(t *testing.T) {
 	dir := t.TempDir()
 	writeDoctorConfig(t, dir, "missing-sops", "0600")
 	writeSOPSConfig(t, dir, "creation_rules:\n  - path_regex: production/.*\\.enc\\.yaml$\n    age: age1realrecipient\n")
@@ -237,12 +298,40 @@ func TestDoctorSkipsDecryptValidationWhenSOPSMissing(t *testing.T) {
 		t.Fatalf("Run returned error: %v", err)
 	}
 	binaryCheck := findCheck(t, result, "sops binary")
-	if binaryCheck.Status != doctor.StatusFail {
-		t.Fatalf("expected missing sops failure, got %#v", binaryCheck)
+	if binaryCheck.Status != doctor.StatusOK {
+		t.Fatalf("expected missing sops to be informational, got %#v", binaryCheck)
 	}
-	skipCheck := findCheck(t, result, "decrypt validation")
-	if skipCheck.Status != doctor.StatusSkip {
-		t.Fatalf("expected decrypt validation skip, got %#v", skipCheck)
+	secretCheck := findCheck(t, result, "secret production/platform/app")
+	if secretCheck.Status != doctor.StatusOK {
+		t.Fatalf("expected library decrypt validation to pass without sops CLI, got %#v", secretCheck)
+	}
+}
+
+func TestDoctorReportsSOPSDecryptWarnings(t *testing.T) {
+	dir := t.TempDir()
+	writeDoctorConfig(t, dir, "missing-sops", "0600")
+	writeSOPSConfig(t, dir, "creation_rules:\n  - path_regex: production/.*\\.enc\\.yaml$\n    age: age1realrecipient\n")
+	secretPath := writeEncryptedSecret(t, dir, "production/platform/app.enc.yaml")
+	if err := os.WriteFile(secretPath, []byte(doctorWarningEncryptedYAML), 0o600); err != nil {
+		t.Fatalf("rewrite encrypted secret with comment: %v", err)
+	}
+
+	result, err := doctor.Run(dir)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	check := findCheck(t, result, "secret production/platform/app")
+	if check.Status != doctor.StatusWarn {
+		t.Fatalf("expected decrypt warning to be reported as doctor warning, got %#v", check)
+	}
+	if !strings.Contains(check.Summary, "SOPS compatibility warnings") {
+		t.Fatalf("expected compatibility warning summary, got %q", check.Summary)
+	}
+	if !containsSubstring(check.Details, "possibly unencrypted comment") || !containsSubstring(check.Details, "dry-run smoke marker") {
+		t.Fatalf("expected captured SOPS warning details, got %#v", check.Details)
+	}
+	if !containsSubstring(check.Remediation, "current SOPS CLI") {
+		t.Fatalf("expected SOPS CLI remediation, got %#v", check.Remediation)
 	}
 }
 
@@ -261,23 +350,63 @@ func TestDoctorWarnsOnUnsafeFileMode(t *testing.T) {
 	}
 }
 
-func TestDoctorWarnsOnDuplicateEnvKeys(t *testing.T) {
+func TestDoctorFailsWhenAgeKeyIsWrong(t *testing.T) {
 	dir := t.TempDir()
-	writeFakeSOPS(t, dir, "fake-sops", "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  echo 'sops 3.9.0'\n  exit 0\nfi\nif [ \"$1\" = \"--decrypt\" ]; then\n  printf 'version: 1\\nkind: env\\nname: production/platform/app\\nvalues:\\n  APP_ENV: production\\n  APP_ENV: duplicate\\n'\n  exit 0\nfi\nexit 0\n")
-	writeDoctorConfig(t, dir, "fake-sops", "0600")
+	writeDoctorConfig(t, dir, "missing-sops", "0600")
 	writeSOPSConfig(t, dir, "creation_rules:\n  - path_regex: production/.*\\.enc\\.yaml$\n    age: age1realrecipient\n")
-	writeEncryptedSecret(t, dir, "production/platform/app.enc.yaml")
+	writeEncryptedSecretWithKey(t, dir, "production/platform/app.enc.yaml", doctorWrongAgeKey)
 
 	result, err := doctor.Run(dir)
 	if err != nil {
 		t.Fatalf("Run returned error: %v", err)
 	}
 	check := findCheck(t, result, "secret production/platform/app")
-	if check.Status != doctor.StatusWarn {
-		t.Fatalf("expected duplicate key warning, got %#v", check)
+	if check.Status != doctor.StatusFail {
+		t.Fatalf("expected wrong age key to fail decrypt validation, got %#v", check)
 	}
-	if !containsSubstring(check.Details, "APP_ENV") {
-		t.Fatalf("expected duplicate key detail, got %#v", check.Details)
+	if !containsSubstring(check.Details, "Decrypt error") {
+		t.Fatalf("expected decrypt error detail, got %#v", check.Details)
+	}
+}
+
+func TestDoctorFailsWhenNoAgeKey(t *testing.T) {
+	dir := t.TempDir()
+	writeDoctorConfig(t, dir, "missing-sops", "0600")
+	writeSOPSConfig(t, dir, "creation_rules:\n  - path_regex: production/.*\\.enc\\.yaml$\n    age: age1realrecipient\n")
+
+	secretPath := filepath.Join(dir, "production/platform/app.enc.yaml")
+	if err := os.MkdirAll(filepath.Dir(secretPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+	if err := os.WriteFile(secretPath, []byte(doctorEncryptedYAML), 0o600); err != nil {
+		t.Fatalf("write secret: %v", err)
+	}
+
+	clearAgeKeyDoctorEnv(t)
+
+	result, err := doctor.Run(dir)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+
+	binaryCheck := findCheck(t, result, "sops binary")
+	if binaryCheck.Status != doctor.StatusOK {
+		t.Fatalf("expected missing sops to be informational, got %#v", binaryCheck)
+	}
+
+	secretCheck := findCheck(t, result, "secret production/platform/app")
+	if secretCheck.Status != doctor.StatusFail {
+		t.Fatalf("expected decrypt to fail without age key, got %#v", secretCheck)
+	}
+	if !containsSubstring(secretCheck.Details, "Decrypt error") {
+		t.Fatalf("expected Decrypt error in details, got %#v", secretCheck.Details)
+	}
+	for _, detail := range secretCheck.Details {
+		for _, phrase := range []string{"install sops", "sops binary", "sops executable", "sops --decrypt"} {
+			if strings.Contains(detail, phrase) {
+				t.Fatalf("must not suggest sops binary installation: %q", detail)
+			}
+		}
 	}
 }
 
@@ -338,16 +467,70 @@ func writeSOPSConfig(t *testing.T, dir, body string) {
 	}
 }
 
-func writeEncryptedSecret(t *testing.T, dir, relativePath string) {
+func writeEncryptedSecret(t *testing.T, dir, relativePath string) string {
+	t.Helper()
+	return writeEncryptedSecretWithKey(t, dir, relativePath, doctorAgeKey)
+}
+
+func writeEncryptedSecretWithKey(t *testing.T, dir, relativePath, keyBody string) string {
 	t.Helper()
 	secretPath := filepath.Join(dir, relativePath)
 	if err := os.MkdirAll(filepath.Dir(secretPath), 0o755); err != nil {
 		t.Fatalf("MkdirAll returned error: %v", err)
 	}
-	secret := "version: 1\nkind: env\nname: ENC[AES256_GCM,data:abc,type:str]\nvalues:\n  APP_ENV: ENC[AES256_GCM,data:def,type:str]\nsops:\n  version: 3.8.0\n"
-	if err := os.WriteFile(secretPath, []byte(secret), 0o600); err != nil {
+	if err := os.WriteFile(secretPath, []byte(doctorEncryptedYAML), 0o600); err != nil {
 		t.Fatalf("write secret: %v", err)
 	}
+	keyPath := filepath.Join(dir, "age.key")
+	if err := os.WriteFile(keyPath, []byte(keyBody), 0o600); err != nil {
+		t.Fatalf("write age key: %v", err)
+	}
+	t.Setenv("SOPS_AGE_KEY_FILE", keyPath)
+	return secretPath
+}
+
+func clearAgeKeyDoctorEnv(t *testing.T) {
+	t.Helper()
+
+	prevKeyFile, hadKeyFile := os.LookupEnv("SOPS_AGE_KEY_FILE")
+	os.Unsetenv("SOPS_AGE_KEY_FILE")
+	t.Cleanup(func() {
+		if hadKeyFile {
+			os.Setenv("SOPS_AGE_KEY_FILE", prevKeyFile)
+		} else {
+			os.Unsetenv("SOPS_AGE_KEY_FILE")
+		}
+	})
+
+	prevKey, hadKey := os.LookupEnv("SOPS_AGE_KEY")
+	os.Unsetenv("SOPS_AGE_KEY")
+	t.Cleanup(func() {
+		if hadKey {
+			os.Setenv("SOPS_AGE_KEY", prevKey)
+		} else {
+			os.Unsetenv("SOPS_AGE_KEY")
+		}
+	})
+
+	prevHome, hadHome := os.LookupEnv("HOME")
+	os.Setenv("HOME", t.TempDir())
+	t.Cleanup(func() {
+		if hadHome {
+			os.Setenv("HOME", prevHome)
+		} else {
+			os.Unsetenv("HOME")
+		}
+	})
+
+	prevXDG, hadXDG := os.LookupEnv("XDG_CONFIG_HOME")
+	os.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Cleanup(func() {
+		if hadXDG {
+			os.Setenv("XDG_CONFIG_HOME", prevXDG)
+		} else {
+			os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	})
 }
 
 func writeFakeSOPS(t *testing.T, dir, binaryName, script string) {

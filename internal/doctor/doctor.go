@@ -1,10 +1,8 @@
 package doctor
 
 import (
-	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -24,8 +22,9 @@ func Run(cwd string) (Result, error) {
 
 	cfg, cfgOK := runConfigChecks(cwd, &result)
 	if cfgOK {
-		// Tool checks depend on keyseal.yaml values, but users need missing
-		// binaries surfaced before lower-priority repository details.
+		// Tool checks depend on keyseal.yaml values. Missing sops/age binaries
+		// are informational for read-only hosts, but surfacing them early keeps
+		// mutating-command setup problems easy to find.
 		configCheck := result.Checks[0]
 		result.Checks = result.Checks[:0]
 		runSOPSBinaryChecks(cfg, cwd, &result)
@@ -51,7 +50,6 @@ func Run(cwd string) (Result, error) {
 	runOutputPathChecks(cfg, &result)
 	runRepoArtifactChecks(repoRoot, &result)
 
-	sopsAvailable := sopsBinaryAvailable(result)
 	if !repoRootReady {
 		result.Add(CheckResult{
 			Name:     "secret discovery",
@@ -65,21 +63,10 @@ func Run(cwd string) (Result, error) {
 		return result, nil
 	}
 
-	if err := runSecretChecks(cwd, repoRoot, cfg, sopsAvailable, &result); err != nil {
+	if err := runSecretChecks(cwd, repoRoot, cfg, &result); err != nil {
 		return result, fmt.Errorf("run secret checks: %w", err)
 	}
 	return result, nil
-}
-
-// sopsBinaryAvailable reports whether the earlier doctor SOPS binary check was
-// successful enough for decrypt validation to proceed.
-func sopsBinaryAvailable(result Result) bool {
-	for _, check := range result.Checks {
-		if check.Name == "sops binary" {
-			return check.Status == StatusOK || check.Status == StatusWarn
-		}
-	}
-	return false
 }
 
 func runConfigChecks(cwd string, result *Result) (config.Config, bool) {
@@ -380,22 +367,25 @@ func runSOPSConfigChecks(cwd string, result *Result) {
 	})
 }
 
+// runSOPSBinaryChecks reports whether the external SOPS CLI is ready for
+// mutating commands without gating library-backed decrypt validation.
 func runSOPSBinaryChecks(cfg config.Config, cwd string, result *Result) bool {
 	binary := cfg.SOPS.Binary
 	resolved, err := sopsutil.LookPath(binary)
 	if err != nil {
 		result.Add(CheckResult{
 			Name:     "sops binary",
-			Status:   StatusFail,
-			Severity: SeverityError,
+			Status:   StatusOK,
+			Severity: SeverityInformational,
 			Summary:  "Configured sops binary could not be resolved",
 			Details: []string{
 				fmt.Sprintf("Configured value: %q", binary),
 				fmt.Sprintf("Lookup error: %v", err),
-				"Encrypted add, edit, render, exec, and decrypt validation all depend on a working SOPS binary.",
+				"Read-only decrypt, render, exec, doctor, and verify use the official SOPS Go decrypt library and do not require the external binary.",
+				"The external SOPS binary is still required for add, edit, and updatekeys.",
 			},
 			Remediation: []string{
-				fmt.Sprintf("Install SOPS and make %q available in PATH, or update sops.binary in keyseal.yaml.", binary),
+				fmt.Sprintf("Install SOPS and make %q available in PATH, or update sops.binary in keyseal.yaml before running mutating commands.", binary),
 			},
 		})
 		return false
@@ -405,15 +395,16 @@ func runSOPSBinaryChecks(cfg config.Config, cwd string, result *Result) bool {
 	if err != nil {
 		result.Add(CheckResult{
 			Name:     "sops binary",
-			Status:   StatusFail,
-			Severity: SeverityError,
+			Status:   StatusWarn,
+			Severity: SeverityWarning,
 			Summary:  "Configured sops binary was found but could not be executed",
 			Details: []string{
 				fmt.Sprintf("Resolved path: %s", resolved),
 				fmt.Sprintf("Version check error: %v", err),
+				"Read-only decrypt validation can still run through the SOPS Go library.",
 			},
 			Remediation: []string{
-				"Ensure the configured SOPS binary is executable and runs successfully with `sops --version`.",
+				"Ensure the configured SOPS binary is executable before running add, edit, or updatekeys.",
 			},
 		})
 		return false
@@ -424,7 +415,7 @@ func runSOPSBinaryChecks(cfg config.Config, cwd string, result *Result) bool {
 	}
 	status := StatusOK
 	severity := SeverityInformational
-	summary := "SOPS binary is available"
+	summary := "SOPS binary is available for mutating commands"
 	if version != "" {
 		details = append(details, fmt.Sprintf("Version: %s", version))
 	} else {
@@ -442,24 +433,25 @@ func runSOPSBinaryChecks(cfg config.Config, cwd string, result *Result) bool {
 	return true
 }
 
-// runAgeBinaryChecks warns when the configured age binary is unavailable so
-// age-based repositories can catch local setup issues early.
+// runAgeBinaryChecks reports age CLI availability for admin key workflows
+// without making the age binary a read-only deployment requirement.
 func runAgeBinaryChecks(cfg config.Config, result *Result) bool {
 	binary := cfg.SOPS.AgeBinary
 	probe, err := toolcheck.Probe(binary, nil, "--version")
 	if err != nil {
 		result.Add(CheckResult{
 			Name:     "age binary",
-			Status:   StatusWarn,
-			Severity: SeverityWarning,
+			Status:   StatusOK,
+			Severity: SeverityInformational,
 			Summary:  "Configured age binary could not be resolved or executed",
 			Details: []string{
 				fmt.Sprintf("Configured value: %q", binary),
 				fmt.Sprintf("Lookup or version error: %v", err),
-				"Keyseal delegates encryption to SOPS, but the default repository template uses age recipients.",
+				"Read-only decrypt operations need age private key material, not the external age CLI.",
+				"The age CLI is still useful on developer/admin machines for key generation and inspection.",
 			},
 			Remediation: []string{
-				fmt.Sprintf("Install age and make %q available in PATH, or update sops.age_binary in keyseal.yaml.", binary),
+				fmt.Sprintf("Install age and make %q available in PATH only if this machine needs age key generation or inspection.", binary),
 			},
 		})
 		return false
@@ -470,7 +462,7 @@ func runAgeBinaryChecks(cfg config.Config, result *Result) bool {
 	}
 	status := StatusOK
 	severity := SeverityInformational
-	summary := "age binary is available"
+	summary := "age binary is available for admin key workflows"
 	if probe.Version != "" {
 		details = append(details, fmt.Sprintf("Version: %s", probe.Version))
 	} else {
@@ -524,7 +516,7 @@ func runRepoArtifactChecks(repoRoot string, result *Result) {
 	})
 }
 
-func runSecretChecks(cwd, repoRoot string, cfg config.Config, sopsAvailable bool, result *Result) error {
+func runSecretChecks(cwd, repoRoot string, cfg config.Config, result *Result) error {
 	files, err := repo.DiscoverEncryptedFiles(repoRoot, cfg.Repository.EncryptedExtension)
 	if err != nil {
 		return err
@@ -554,7 +546,6 @@ func runSecretChecks(cwd, repoRoot string, cfg config.Config, sopsAvailable bool
 	opts.RequireValues = cfg.Validation.RequireValues
 	opts.KeyPattern = cfg.Validation.KeyPattern
 
-	skippedDecrypts := 0
 	for _, file := range files {
 		logical, err := repo.PathToLogicalName(repoRoot, file, cfg.Repository.EncryptedExtension)
 		if err != nil {
@@ -639,12 +630,7 @@ func runSecretChecks(cwd, repoRoot string, cfg config.Config, sopsAvailable bool
 			continue
 		}
 
-		if !sopsAvailable {
-			skippedDecrypts++
-			continue
-		}
-
-		plaintext, err := sopsutil.DecryptFile(cfg.SOPS.Binary, config.ResolvePath(cwd, cfg.SOPS.AgeKeyFile), file)
+		plaintext, decryptWarnings, err := sopsutil.DecryptFileWithWarnings(file, "yaml", config.ResolvePath(cwd, cfg.SOPS.AgeKeyFile))
 		if err != nil {
 			result.Add(CheckResult{
 				Name:     fmt.Sprintf("secret %s", logical),
@@ -661,7 +647,6 @@ func runSecretChecks(cwd, repoRoot string, cfg config.Config, sopsAvailable bool
 			})
 			continue
 		}
-
 		doc, dupes, err := schema.ParseYAMLDocument(plaintext)
 		if err != nil {
 			result.Add(CheckResult{
@@ -709,39 +694,42 @@ func runSecretChecks(cwd, repoRoot string, cfg config.Config, sopsAvailable bool
 			})
 			continue
 		}
+		if len(decryptWarnings) > 0 {
+			result.Add(CheckResult{
+				Name:     fmt.Sprintf("secret %s", logical),
+				Status:   StatusWarn,
+				Severity: SeverityWarning,
+				Summary:  fmt.Sprintf("%s decrypted and validated with SOPS compatibility warnings", filepath.ToSlash(file)),
+				Details: append([]string{
+					"The file decrypted successfully and its schema is valid, but the SOPS Go library reported warnings while reading it.",
+					"These warnings are shown here instead of during render/exec so plaintext output stays clean.",
+				}, decryptWarnings...),
+				Remediation: []string{
+					"Open and save or re-encrypt this file with a current SOPS CLI on a developer/admin machine.",
+					"Then rerun `keyseal doctor` to confirm the compatibility warning is gone.",
+				},
+			})
+			continue
+		}
 		result.Add(CheckResult{
 			Name:     fmt.Sprintf("secret %s", logical),
 			Status:   StatusOK,
 			Severity: SeverityInformational,
-			Summary:  fmt.Sprintf("%s decrypted and validated successfully", filepath.ToSlash(file)),
+			Summary:  "Decrypted and validated successfully",
 		})
 	}
 
-	if !sopsAvailable && len(files) > 0 {
-		result.Add(CheckResult{
-			Name:     "decrypt validation",
-			Status:   StatusSkip,
-			Severity: SeverityInformational,
-			Summary:  fmt.Sprintf("Skipped decrypt validation for %d file(s) because the configured SOPS binary is unavailable", skippedDecrypts),
-			Remediation: []string{
-				"Install or fix the configured SOPS binary, then rerun `keyseal doctor` for full secret validation.",
-			},
-		})
-	}
 	return nil
 }
 
+// classifyDecryptError keeps doctor error details behind one helper so future
+// backend-specific sanitization can happen without touching check assembly.
 func classifyDecryptError(err error) string {
-	if errors.Is(err, sopsutil.ErrBinaryNotFound) {
-		return "sops binary not found"
-	}
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		return "sops command failed"
-	}
 	return err.Error()
 }
 
+// dedupeStrings preserves first-seen order while removing repeated remediation
+// lines from checks that aggregate multiple path findings.
 func dedupeStrings(values []string) []string {
 	if len(values) == 0 {
 		return nil

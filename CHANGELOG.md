@@ -4,6 +4,15 @@ All notable changes to Keyseal will be documented in this file.
 
 The format is intentionally lightweight and optimized for public release tags.
 
+## v1.1.0
+
+Highlights:
+- read-only decrypt paths now use the official SOPS Go decrypt library for `render`, `exec`, `doctor`, and `verify`
+- production/deploy machines no longer need external `sops` or `age` binaries for read-only decrypt/render/exec/validation workflows; they still need Keyseal, encrypted files, and age private key material
+- external SOPS CLI remains required for mutating workflows: `add`, `edit`, and `updatekeys`
+- SOPS library compatibility warnings, such as older unencrypted comment warnings, are suppressed during `render` and `exec` but reported deliberately by `doctor`/`verify`
+- documentation now distinguishes developer/admin machines from production/deploy machines and calls out that servers need the age key, not the age CLI
+
 ## v1.0.0
 
 This release marks the first stable release of Keyseal.
@@ -23,7 +32,7 @@ Highlights:
 Tightens up Keyseal's day-to-day secret handling, especially around empty placeholders, SOPS checks, and keeping encrypted files in sync when recipients change.
 
 Highlights:
-- SOPS-backed commands now preflight the configured SOPS binary before decrypting or mutating files, and `keyseal doctor` now reports SOPS and age tool availability near the top of its output
+- SOPS-backed commands preflight the configured SOPS binary before mutating files, and `keyseal doctor` reports SOPS and age tool availability near the top of its output
 - `keyseal updatekeys` now batch-syncs SOPS recipients for Keyseal-managed encrypted files from `.sops.yaml`, with placeholder/plaintext safety checks and optional explicit commits
 - empty or whitespace-only `.enc.yaml` files are now treated as placeholder secrets so `render` and `exec` skip them when other requested secrets are usable, and fail clearly when every requested secret is still uninitialized
 - `keyseal edit` now bootstraps placeholder secret files with an encrypted starter document before opening SOPS, making recovery from empty placeholder files a first-class workflow
@@ -49,7 +58,7 @@ Initial public release.
 
 Highlights:
 - Cobra-based CLI with `init`, `add`, `edit`, `render`, `exec`, and `doctor`
-- SOPS subprocess integration for edit and decrypt flows
+- SOPS subprocess integration for initial edit and decrypt flows
 - deterministic logical-name to `.enc.yaml` mapping
 - dotenv, JSON, and YAML render outputs
 - doctor checks for config health, repo naming, schema validation, and plaintext starter-file detection

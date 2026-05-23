@@ -5,7 +5,7 @@
 [![CI](https://github.com/Barkway-app/keyseal/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Barkway-app/keyseal/actions/workflows/ci.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/Barkway-app/keyseal)](https://github.com/Barkway-app/keyseal/releases)
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](./LICENSE)
-[![Go Version](https://img.shields.io/badge/go-1.22%2B-00ADD8)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/go-1.25%2B-00ADD8)](https://go.dev/)
 
 > **Default flow:** `keyseal add` scaffolds and encrypts a new secret document immediately, without writing plaintext starter content to the final `.enc.yaml` path.
 
@@ -24,7 +24,7 @@ It helps teams:
 
 Keyseal does not implement encryption itself, replace SOPS, run a server, expose an API, or behave like a hosted secrets platform.
 
-Keyseal shells out to the installed `sops` binary for editing and decryption. It does not vendor, embed, or replace SOPS.
+Keyseal uses the official SOPS Go decrypt library for read-only decryption in render, exec, and validation paths. The external SOPS binary is still required for commands that create, edit, or rotate encrypted files.
 
 ## Why it exists
 
@@ -37,9 +37,17 @@ SOPS already solves encryption and editing well. Keyseal stays one layer above t
 
 ## Requirements
 
-- Go 1.22+ to build the CLI
-- `sops` installed locally and available in `PATH`
+- Go 1.25+ to build the CLI
 - age recipients configured in `.sops.yaml`
+
+Developer/admin machines that run `keyseal add`, `keyseal edit`, or `keyseal updatekeys` also need the external `sops` binary.
+
+Production, CI, or deploy machines that only run `keyseal render`, `keyseal exec`, `keyseal doctor`, or `keyseal verify` need only:
+- the `keyseal` binary
+- the encrypted secrets files/repo
+- age private key material, usually through `SOPS_AGE_KEY_FILE` or `sops.age_key_file`
+
+They do not need the external `sops` binary or the external `age` binary. Servers need the age key, not the age CLI.
 
 ## Installation
 
@@ -107,7 +115,7 @@ make build
 - `keyseal rollback <logical-name> --to <commit>` restores one secret file from Git history
 - `keyseal render <logical-name...>` decrypts, merges, and renders secret values, skipping empty placeholder files
 - `keyseal exec <logical-name...> -- <command...>` runs a child process with merged env vars, skipping empty placeholder files
-- `keyseal doctor` validates config sanity, SOPS availability, age availability warnings, `.sops.yaml` readiness, placeholder recipients, plaintext mistakes, empty placeholders, and decrypted document shape
+- `keyseal doctor` validates config sanity, mutating-command SOPS CLI availability, age key/deployment context, `.sops.yaml` readiness, placeholder recipients, plaintext mistakes, empty placeholders, decrypted document shape, and SOPS library compatibility warnings
 - `keyseal verify` runs strict CI checks and fails on any doctor warning or failure
 - `keyseal version` reports version, commit, and build date metadata
 
@@ -179,7 +187,8 @@ Key workflow details:
 - `-m, --message` implies commit on mutating commands
 - `git.auto_commit` is off by default
 - `sops.age_key_file` is used as the default age key path unless `SOPS_AGE_KEY_FILE` is already set
-- SOPS-backed commands check the configured `sops.binary` before decrypting or mutating secret files
+- read-only decrypt paths use the SOPS Go library and do not require external `sops` or `age` binaries
+- mutating commands check the configured `sops.binary` before creating, editing, or rotating encrypted files
 - `updatekeys` uses `.sops.yaml` as the recipient source of truth and does not rotate secret values or data encryption keys
 - `keyseal commit` stages only Keyseal-managed files, not the whole repo
 - `rollback` restores the encrypted file from Git history, while `--dry-run` previews safely without modifying the working tree
@@ -238,13 +247,13 @@ GitHub Actions runs:
 - `go build ./cmd/keyseal`
 - tagged `v*` release builds that publish tar.gz archives, `.deb` packages, `.rpm` packages, and checksums
 
-For repositories managed by Keyseal, use `keyseal verify` as the strict health gate in release and deploy workflows.
+For repositories managed by Keyseal, use `keyseal verify` as the strict health gate in release and deploy workflows. Read-only deploy runners can run verification with only Keyseal, the encrypted repo, and the age private key material.
 
 ## Built by Barkway
 
 Keyseal is built by the team at Barkway.
 
-We created it to solve a practical infrastructure problem in our own stack: managing encrypted secret files safely and predictably with `sops`, `age`, and Git.
+We created it to solve a practical infrastructure problem in our own stack: managing encrypted secret files safely and predictably with SOPS-compatible encryption, age keys, and Git.
 
 Learn more about Barkway and our open-source work: https://www.barkway.app/open-source
 

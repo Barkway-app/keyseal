@@ -43,10 +43,9 @@ func newRenderCommand() *cobra.Command {
 			if mode == "" {
 				mode = cfg.Defaults.FileMode
 			}
-			if err := ensureSOPSAvailable(cfg, cwd); err != nil {
-				return err
-			}
 
+			// Read-only decrypt uses the SOPS Go library, so deploy hosts do not
+			// need the external sops binary just to render runtime secrets.
 			loaded, err := loadDocuments(cfg, cwd, args)
 			if err != nil {
 				return err
