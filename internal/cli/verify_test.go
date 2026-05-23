@@ -11,7 +11,7 @@ import (
 // doctor reports no warnings or failures.
 func TestVerifyPassesOnCleanRepository(t *testing.T) {
 	repoRoot := seedVerifyRepo(t)
-	configureDecryptOnlySOPS(t, repoRoot)
+	configureVersionOnlySOPS(t, repoRoot)
 	configureFakeAge(t, repoRoot)
 	writeEncryptedFixture(t, repoRoot, "production/platform/app.enc.yaml")
 
@@ -31,7 +31,7 @@ func TestVerifyPassesOnCleanRepository(t *testing.T) {
 // doctor would still exit successfully.
 func TestVerifyFailsOnWarning(t *testing.T) {
 	repoRoot := seedVerifyRepo(t)
-	configureDecryptOnlySOPS(t, repoRoot)
+	configureVersionOnlySOPS(t, repoRoot)
 	configureFakeAge(t, repoRoot)
 	writeCLIFile(t, filepath.Join(repoRoot, "production/platform/empty.enc.yaml"), " \n")
 
@@ -73,7 +73,7 @@ func TestVerifyFailsOnFailure(t *testing.T) {
 // behavior.
 func TestVerifyJSONOutput(t *testing.T) {
 	repoRoot := seedVerifyRepo(t)
-	configureDecryptOnlySOPS(t, repoRoot)
+	configureVersionOnlySOPS(t, repoRoot)
 	configureFakeAge(t, repoRoot)
 	writeCLIFile(t, filepath.Join(repoRoot, "production/platform/empty.enc.yaml"), " \n")
 

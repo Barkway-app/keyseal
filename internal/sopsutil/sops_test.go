@@ -189,6 +189,40 @@ func TestDecryptFileFailsWithMissingOrWrongAgeKey(t *testing.T) {
 	}
 }
 
+func TestDecryptFileFailsWithNoAgeKey(t *testing.T) {
+	secretPath, _ := writeLibraryDecryptFixture(t, testAgeKey)
+	clearAgeKeyEnv(t)
+
+	_, err := sopsutil.DecryptFile(secretPath, "yaml", "")
+	if err == nil {
+		t.Fatal("expected decrypt to fail when no age key is available")
+	}
+	for _, phrase := range []string{"install sops", "sops binary", "sops executable", "sops --decrypt"} {
+		if strings.Contains(err.Error(), phrase) {
+			t.Fatalf("error must not suggest installing sops binary: %v", err)
+		}
+	}
+	if !strings.Contains(err.Error(), "age") && !strings.Contains(err.Error(), "key") {
+		t.Fatalf("expected error about age/key, got: %v", err)
+	}
+}
+
+func TestDecryptFileFailsWithMissingConfiguredAgeKeyFile(t *testing.T) {
+	secretPath, _ := writeLibraryDecryptFixture(t, testAgeKey)
+	clearAgeKeyEnv(t)
+
+	missingPath := filepath.Join(t.TempDir(), "nonexistent-age.key")
+	_, err := sopsutil.DecryptFile(secretPath, "yaml", missingPath)
+	if err == nil {
+		t.Fatal("expected decrypt to fail when configured age key file does not exist")
+	}
+	for _, phrase := range []string{"install sops", "sops binary", "sops executable", "sops --decrypt"} {
+		if strings.Contains(err.Error(), phrase) {
+			t.Fatalf("error must not suggest installing sops binary: %v", err)
+		}
+	}
+}
+
 func TestEncryptFileWithStubBinary(t *testing.T) {
 	dir := t.TempDir()
 	binDir := filepath.Join(dir, "bin")
@@ -333,6 +367,53 @@ func writeAgeKey(t *testing.T, dir, keyBody string) string {
 		t.Fatalf("write age key: %v", err)
 	}
 	return keyPath
+}
+
+// clearAgeKeyEnv unsets age key env vars and redirects default key paths so
+// tests never accidentally pick up a real developer-machine age key.
+// Previous values are restored in t.Cleanup.
+func clearAgeKeyEnv(t *testing.T) {
+	t.Helper()
+
+	prevKeyFile, hadKeyFile := os.LookupEnv("SOPS_AGE_KEY_FILE")
+	os.Unsetenv("SOPS_AGE_KEY_FILE")
+	t.Cleanup(func() {
+		if hadKeyFile {
+			os.Setenv("SOPS_AGE_KEY_FILE", prevKeyFile)
+		} else {
+			os.Unsetenv("SOPS_AGE_KEY_FILE")
+		}
+	})
+
+	prevKey, hadKey := os.LookupEnv("SOPS_AGE_KEY")
+	os.Unsetenv("SOPS_AGE_KEY")
+	t.Cleanup(func() {
+		if hadKey {
+			os.Setenv("SOPS_AGE_KEY", prevKey)
+		} else {
+			os.Unsetenv("SOPS_AGE_KEY")
+		}
+	})
+
+	prevHome, hadHome := os.LookupEnv("HOME")
+	os.Setenv("HOME", t.TempDir())
+	t.Cleanup(func() {
+		if hadHome {
+			os.Setenv("HOME", prevHome)
+		} else {
+			os.Unsetenv("HOME")
+		}
+	})
+
+	prevXDG, hadXDG := os.LookupEnv("XDG_CONFIG_HOME")
+	os.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Cleanup(func() {
+		if hadXDG {
+			os.Setenv("XDG_CONFIG_HOME", prevXDG)
+		} else {
+			os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	})
 }
 
 func restoreEnv(t *testing.T, key, value string, hadValue bool) {

@@ -369,6 +369,47 @@ func TestDoctorFailsWhenAgeKeyIsWrong(t *testing.T) {
 	}
 }
 
+func TestDoctorFailsWhenNoAgeKey(t *testing.T) {
+	dir := t.TempDir()
+	writeDoctorConfig(t, dir, "missing-sops", "0600")
+	writeSOPSConfig(t, dir, "creation_rules:\n  - path_regex: production/.*\\.enc\\.yaml$\n    age: age1realrecipient\n")
+
+	secretPath := filepath.Join(dir, "production/platform/app.enc.yaml")
+	if err := os.MkdirAll(filepath.Dir(secretPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+	if err := os.WriteFile(secretPath, []byte(doctorEncryptedYAML), 0o600); err != nil {
+		t.Fatalf("write secret: %v", err)
+	}
+
+	clearAgeKeyDoctorEnv(t)
+
+	result, err := doctor.Run(dir)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+
+	binaryCheck := findCheck(t, result, "sops binary")
+	if binaryCheck.Status != doctor.StatusOK {
+		t.Fatalf("expected missing sops to be informational, got %#v", binaryCheck)
+	}
+
+	secretCheck := findCheck(t, result, "secret production/platform/app")
+	if secretCheck.Status != doctor.StatusFail {
+		t.Fatalf("expected decrypt to fail without age key, got %#v", secretCheck)
+	}
+	if !containsSubstring(secretCheck.Details, "Decrypt error") {
+		t.Fatalf("expected Decrypt error in details, got %#v", secretCheck.Details)
+	}
+	for _, detail := range secretCheck.Details {
+		for _, phrase := range []string{"install sops", "sops binary", "sops executable", "sops --decrypt"} {
+			if strings.Contains(detail, phrase) {
+				t.Fatalf("must not suggest sops binary installation: %q", detail)
+			}
+		}
+	}
+}
+
 func findCheck(t *testing.T, result doctor.Result, name string) doctor.CheckResult {
 	t.Helper()
 	for _, check := range result.Checks {
@@ -446,6 +487,50 @@ func writeEncryptedSecretWithKey(t *testing.T, dir, relativePath, keyBody string
 	}
 	t.Setenv("SOPS_AGE_KEY_FILE", keyPath)
 	return secretPath
+}
+
+func clearAgeKeyDoctorEnv(t *testing.T) {
+	t.Helper()
+
+	prevKeyFile, hadKeyFile := os.LookupEnv("SOPS_AGE_KEY_FILE")
+	os.Unsetenv("SOPS_AGE_KEY_FILE")
+	t.Cleanup(func() {
+		if hadKeyFile {
+			os.Setenv("SOPS_AGE_KEY_FILE", prevKeyFile)
+		} else {
+			os.Unsetenv("SOPS_AGE_KEY_FILE")
+		}
+	})
+
+	prevKey, hadKey := os.LookupEnv("SOPS_AGE_KEY")
+	os.Unsetenv("SOPS_AGE_KEY")
+	t.Cleanup(func() {
+		if hadKey {
+			os.Setenv("SOPS_AGE_KEY", prevKey)
+		} else {
+			os.Unsetenv("SOPS_AGE_KEY")
+		}
+	})
+
+	prevHome, hadHome := os.LookupEnv("HOME")
+	os.Setenv("HOME", t.TempDir())
+	t.Cleanup(func() {
+		if hadHome {
+			os.Setenv("HOME", prevHome)
+		} else {
+			os.Unsetenv("HOME")
+		}
+	})
+
+	prevXDG, hadXDG := os.LookupEnv("XDG_CONFIG_HOME")
+	os.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Cleanup(func() {
+		if hadXDG {
+			os.Setenv("XDG_CONFIG_HOME", prevXDG)
+		} else {
+			os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	})
 }
 
 func writeFakeSOPS(t *testing.T, dir, binaryName, script string) {

@@ -59,6 +59,11 @@ func withAgeKeyFileEnv(ageKeyFile string, captureWarnings bool, fn func() ([]byt
 	defer restoreLogs()
 
 	previous, hadPrevious := os.LookupEnv(ageKeyEnvVar)
+	// SOPS_AGE_KEY is intentionally not managed here. If callers provide inline
+	// age key material through the SOPS_AGE_KEY environment variable, the SOPS
+	// library reads it directly from the process environment. Keyseal only
+	// temporarily supplies SOPS_AGE_KEY_FILE when the config provides a path
+	// and no explicit environment value already exists.
 	// Match the historical CLI behavior: a non-empty environment variable is
 	// an explicit operator override, while an empty value still allows config.
 	hasOverride := previous != ""

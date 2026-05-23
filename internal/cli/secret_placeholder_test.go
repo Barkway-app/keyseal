@@ -10,7 +10,7 @@ import (
 func TestRenderSkipsEmptyPlaceholderWhenOtherSecretsAreUsable(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeTestConfig(t, repoRoot)
-	configureDecryptOnlySOPS(t, repoRoot)
+	configureVersionOnlySOPS(t, repoRoot)
 	writeEncryptedFixture(t, repoRoot, "production/platform/app.enc.yaml")
 	writeCLIFile(t, filepath.Join(repoRoot, "production/platform/empty.enc.yaml"), " \n\t")
 
@@ -44,7 +44,7 @@ func TestRenderFailsWhenAllRequestedSecretsAreEmptyPlaceholders(t *testing.T) {
 func TestExecSkipsEmptyPlaceholderWhenOtherSecretsAreUsable(t *testing.T) {
 	repoRoot := t.TempDir()
 	writeTestConfig(t, repoRoot)
-	configureDecryptOnlySOPS(t, repoRoot)
+	configureVersionOnlySOPS(t, repoRoot)
 	writeEncryptedFixture(t, repoRoot, "production/platform/app.enc.yaml")
 	writeCLIFile(t, filepath.Join(repoRoot, "production/platform/empty.enc.yaml"), " ")
 	outPath := filepath.Join(repoRoot, "child-output.txt")
@@ -112,17 +112,6 @@ func TestEditBootstrapsEmptyPlaceholderBeforeOpeningSOPS(t *testing.T) {
 	}
 }
 
-func configureDecryptOnlySOPS(t *testing.T, root string) {
-	t.Helper()
-
-	binDir := filepath.Join(root, "bin")
-	if err := os.MkdirAll(binDir, 0o755); err != nil {
-		t.Fatalf("MkdirAll returned error: %v", err)
-	}
-	writeFakeSOPS(t, filepath.Join(binDir, "sops"), "#!/bin/sh\nif [ \"$1\" = \"--decrypt\" ]; then\n  case \"$2\" in\n    *app.enc.yaml)\n      printf 'version: 1\\nkind: env\\nname: production/platform/app\\nvalues:\\n  APP_ENV: production\\n'\n      exit 0\n      ;;\n  esac\nfi\nif [ \"$1\" = \"--version\" ]; then\n  printf 'sops 3.9.0\\n'\n  exit 0\nfi\nexit 1\n")
-	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-}
-
 func configureVersionOnlySOPS(t *testing.T, root string) {
 	t.Helper()
 
@@ -134,6 +123,8 @@ func configureVersionOnlySOPS(t *testing.T, root string) {
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 
+// configureFakeEditBootstrapSOPS installs a fake sops that can handle both
+// encrypt (for placeholder bootstrap) and inline editing (for edit bootstrap).
 func configureFakeEditBootstrapSOPS(t *testing.T, root string) {
 	t.Helper()
 
