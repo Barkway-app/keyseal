@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/fsutil"
+	"github.com/jrpbuilds/keyseal/internal/fsutil"
 )
 
 func TestIsSafeFileMode(t *testing.T) {

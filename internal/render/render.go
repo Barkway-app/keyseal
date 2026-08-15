@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Barkway-app/keyseal/internal/schema"
+	"github.com/jrpbuilds/keyseal/internal/schema"
 	"gopkg.in/yaml.v3"
 )
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/doctor"
+	"github.com/jrpbuilds/keyseal/internal/doctor"
 )
 
 const doctorAgeKey = `# created: 2026-05-23T08:04:13+01:00

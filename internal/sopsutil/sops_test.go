@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/sopsutil"
 	"github.com/getsops/sops/v3/logging"
+	"github.com/jrpbuilds/keyseal/internal/sopsutil"
 )
 
 const testAgeKey = `# created: 2026-05-23T08:04:13+01:00

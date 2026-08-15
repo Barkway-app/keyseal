@@ -3,12 +3,12 @@ kind: env
 name: production/platform/app
 description: Core Laravel app secrets for production
 values:
-  APP_NAME: Barkway
+  APP_NAME: Example
   APP_ENV: production
   APP_KEY: base64:xxxxx
   APP_DEBUG: "false"
   DB_HOST: 10.0.0.10
   DB_PORT: "3306"
-  DB_DATABASE: barkway
-  DB_USERNAME: barkway_app
+  DB_DATABASE: example
+  DB_USERNAME: example_app
   DB_PASSWORD: super-secret

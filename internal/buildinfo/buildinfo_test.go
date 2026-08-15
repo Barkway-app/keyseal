@@ -3,7 +3,7 @@ package buildinfo_test
 import (
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/buildinfo"
+	"github.com/jrpbuilds/keyseal/internal/buildinfo"
 )
 
 func TestOneLine(t *testing.T) {

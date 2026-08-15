@@ -1,17 +1,18 @@
-![Keyseal logo](https://github.com/Barkway-app/keyseal/wiki/keyseal-logo.png)
+![Keyseal logo](https://github.com/jrpbuilds/keyseal/wiki/keyseal-logo.png)
 
 # Keyseal
 
-[![CI](https://github.com/Barkway-app/keyseal/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Barkway-app/keyseal/actions/workflows/ci.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/Barkway-app/keyseal)](https://github.com/Barkway-app/keyseal/releases)
+[![CI](https://github.com/jrpbuilds/keyseal/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jrpbuilds/keyseal/actions/workflows/ci.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/jrpbuilds/keyseal)](https://github.com/jrpbuilds/keyseal/releases)
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](./LICENSE)
 [![Go Version](https://img.shields.io/badge/go-1.25%2B-00ADD8)](https://go.dev/)
 
 > **Default flow:** `keyseal add` scaffolds and encrypts a new secret document immediately, without writing plaintext starter content to the final `.enc.yaml` path.
 
-Keyseal is a small Go CLI that standardizes encrypted file workflows around `sops`, `age`, and Git. Barkway uses it in production for Git-backed SOPS secret workflows.
+Keyseal is a small Go CLI that standardizes encrypted file workflows around `sops`, `age`, and Git. It was built to solve a real production problem: managing Git-backed SOPS secret workflows at scale.
 
 It helps teams:
+
 - keep encrypted secret files in a repository
 - scaffold new secret documents
 - open encrypted files in `sops`
@@ -29,6 +30,7 @@ Keyseal uses the official SOPS Go decrypt library for read-only decryption in re
 ## Why it exists
 
 SOPS already solves encryption and editing well. Keyseal stays one layer above that and makes a repo-backed workflow more predictable:
+
 - consistent file naming and layout
 - Git-aware workflows around the encrypted files that already live in the repo
 - small config with strong defaults
@@ -43,6 +45,7 @@ SOPS already solves encryption and editing well. Keyseal stays one layer above t
 Developer/admin machines that run `keyseal add`, `keyseal edit`, or `keyseal updatekeys` also need the external `sops` binary.
 
 Production, CI, or deploy machines that only run `keyseal render`, `keyseal exec`, `keyseal doctor`, or `keyseal verify` need only:
+
 - the `keyseal` binary
 - the encrypted secrets files/repo
 - age private key material, usually through `SOPS_AGE_KEY_FILE` or `sops.age_key_file`
@@ -51,27 +54,21 @@ They do not need the external `sops` binary or the external `age` binary. Server
 
 ## Installation
 
-Pre-built binaries and Linux packages are available on the [GitHub Releases](https://github.com/Barkway-app/keyseal/releases) page.
-
-Each release includes:
-- tar.gz archives for Linux (amd64, arm64) and macOS (amd64, arm64)
-- `.deb` packages for Linux amd64 and arm64
-- `.rpm` packages for Linux amd64 and arm64
-- SHA256 checksums for all artifacts
+Pre-built binaries and Linux packages are available on the [GitHub Releases](https://github.com/jrpbuilds/keyseal/releases) page. Each release includes tar.gz archives (Linux and macOS, amd64 and arm64), `.deb` and `.rpm` packages (Linux amd64 and arm64), and SHA256 checksums.
 
 **Linux (Debian/Ubuntu):**
+
 ```bash
 sudo dpkg -i keyseal_<version>_amd64.deb
 ```
 
 **Linux (RHEL/Fedora/SUSE):**
+
 ```bash
 sudo rpm -i keyseal-<version>-1.x86_64.rpm
 ```
 
-**Other platforms:** Extract the binary from the appropriate tar.gz archive and place it somewhere in your `PATH`.
-
-Verify downloads against the `checksums.txt` file included in each release.
+**Other platforms:** extract the binary from the appropriate tar.gz archive and place it somewhere in your `PATH`.
 
 ## Quick start
 
@@ -86,11 +83,7 @@ make build
 ./bin/keyseal doctor
 ```
 
-For a fuller walkthrough, see the wiki:
-- [Quick Start](https://github.com/Barkway-app/keyseal/wiki/Quick-Start)
-- [Concepts](https://github.com/Barkway-app/keyseal/wiki/Concepts)
-- [Command Reference](https://github.com/Barkway-app/keyseal/wiki/Command-Reference)
-- [Configuration Reference](https://github.com/Barkway-app/keyseal/wiki/Configuration-Reference)
+For a fuller walkthrough, see the [Quick Start](https://github.com/jrpbuilds/keyseal/wiki/Quick-Start) guide and the [wiki](https://github.com/jrpbuilds/keyseal/wiki).
 
 ## Build
 
@@ -105,23 +98,21 @@ make build
 ## Command overview
 
 - `keyseal init` bootstraps a repository layout, `keyseal.yaml`, and `.sops.yaml`
-- `keyseal add <logical-name>` creates and encrypts a starter env secret document at the final `.enc.yaml` path, with optional immediate Git commit support
+- `keyseal add <logical-name>` creates and encrypts a starter env secret document, with optional immediate Git commit support
 - `keyseal edit <logical-name>` opens the target file with `sops`, bootstrapping empty placeholder files first when needed
-- `keyseal updatekeys [logical-name...]` syncs SOPS recipients from `.sops.yaml` for encrypted files, with optional explicit Git commit support
-- `keyseal status [logical-name]` shows Git status for Keyseal-managed files, optionally narrowed to one secret
+- `keyseal updatekeys [logical-name...]` syncs SOPS recipients from `.sops.yaml`, with optional explicit Git commit support
+- `keyseal status [logical-name]` shows Git status for Keyseal-managed files
 - `keyseal diff <logical-name>` shows `git diff` for one secret file
-- `keyseal history <logical-name>` shows file-scoped Git history for one secret file, with optional `--oneline` output
+- `keyseal history <logical-name>` shows file-scoped Git history for one secret file
 - `keyseal commit` stages current Keyseal-managed changes and creates a Git commit
 - `keyseal rollback <logical-name> --to <commit>` restores one secret file from Git history
 - `keyseal render <logical-name...>` decrypts, merges, and renders secret values, skipping empty placeholder files
-- `keyseal exec <logical-name...> -- <command...>` runs a child process with merged env vars, skipping empty placeholder files
-- `keyseal doctor` validates config sanity, mutating-command SOPS CLI availability, age key/deployment context, `.sops.yaml` readiness, placeholder recipients, plaintext mistakes, empty placeholders, decrypted document shape, and SOPS library compatibility warnings
+- `keyseal exec <logical-name...> -- <command...>` runs a child process with merged env vars
+- `keyseal doctor` validates config sanity, SOPS CLI availability, age key/deployment context, `.sops.yaml` readiness, and common mistakes
 - `keyseal verify` runs strict CI checks and fails on any doctor warning or failure
 - `keyseal version` reports version, commit, and build date metadata
 
-Detailed flags, examples, and behavior notes live in the wiki:
-- [Command Reference](https://github.com/Barkway-app/keyseal/wiki/Command-Reference)
-- [Troubleshooting](https://github.com/Barkway-app/keyseal/wiki/Troubleshooting)
+Detailed flags, examples, and behavior notes live in the [Command Reference](https://github.com/jrpbuilds/keyseal/wiki/Command-Reference) and [wiki](https://github.com/jrpbuilds/keyseal/wiki).
 
 ## What Keyseal is not
 
@@ -130,42 +121,6 @@ Detailed flags, examples, and behavior notes live in the wiki:
 - not a secret hosting service
 - not a daemon or web UI
 - not a Kubernetes controller
-
-## Example config
-
-```yaml
-version: 1
-
-repository:
-  root: .
-  encrypted_extension: .enc.yaml
-
-sops:
-  binary: sops
-  age_binary: age
-  age_key_file: ~/.config/sops/age/keys.txt
-
-git:
-  auto_commit: false
-
-defaults:
-  output_format: dotenv
-  output_dir: /run/secrets
-  file_mode: "0600"
-
-validation:
-  require_values: true
-  key_pattern: '^[A-Z0-9_]+$'
-
-profiles:
-  default:
-    renders: []
-```
-
-For full schema and config details, see:
-- [Configuration Reference](https://github.com/Barkway-app/keyseal/wiki/Configuration-Reference)
-- [Secret File Format](https://github.com/Barkway-app/keyseal/wiki/Secret-File-Format)
-- [Repository Layout](https://github.com/Barkway-app/keyseal/wiki/Repository-Layout)
 
 ## Usage
 
@@ -184,6 +139,7 @@ keyseal verify
 ```
 
 Key workflow details:
+
 - `-m, --message` implies commit on mutating commands
 - `git.auto_commit` is off by default
 - `sops.age_key_file` is used as the default age key path unless `SOPS_AGE_KEY_FILE` is already set
@@ -191,12 +147,9 @@ Key workflow details:
 - mutating commands check the configured `sops.binary` before creating, editing, or rotating encrypted files
 - `updatekeys` uses `.sops.yaml` as the recipient source of truth and does not rotate secret values or data encryption keys
 - `keyseal commit` stages only Keyseal-managed files, not the whole repo
-- `rollback` restores the encrypted file from Git history, while `--dry-run` previews safely without modifying the working tree
+- `rollback` restores the encrypted file from Git history; `--dry-run` previews safely
 
-For exact command behavior and more examples, see:
-- [Command Reference](https://github.com/Barkway-app/keyseal/wiki/Command-Reference)
-- [Configuration Reference](https://github.com/Barkway-app/keyseal/wiki/Configuration-Reference)
-- [Troubleshooting](https://github.com/Barkway-app/keyseal/wiki/Troubleshooting)
+For exact command behavior and more examples, see the [Command Reference](https://github.com/jrpbuilds/keyseal/wiki/Command-Reference), [Configuration Reference](https://github.com/jrpbuilds/keyseal/wiki/Configuration-Reference), and [Troubleshooting](https://github.com/jrpbuilds/keyseal/wiki/Troubleshooting) wiki pages.
 
 ## Version reporting
 
@@ -206,8 +159,7 @@ keyseal version
 keyseal version --short
 ```
 
-Release builds stamp version, commit, and build date metadata via Go linker flags. Local builds default to `dev`, `unknown`, and `unknown` unless you pass `VERSION`, `COMMIT`, and `DATE`.
-When Git metadata is available, local builds default to the latest `v*` tag and the short current commit, so `keyseal --version` reports output like `keyseal v1.0.0 (abc1234)`.
+Release builds stamp version, commit, and build date metadata via Go linker flags. Local builds default to `dev`, `unknown`, and `unknown` unless you pass `VERSION`, `COMMIT`, and `DATE`. When Git metadata is available, local builds use the latest `v*` tag and the short current commit.
 
 ## Release artifacts
 
@@ -215,15 +167,7 @@ When Git metadata is available, local builds default to the latest `v*` tag and 
 make dist VERSION=v1.0.0 COMMIT=$(git rev-parse --short HEAD) DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 ```
 
-`make dist` builds tar.gz archives for the supported release platforms, generates `.deb` and `.rpm` packages for Linux (amd64, arm64), and writes a single SHA256 checksums file covering all artifacts to `dist/`.
-
-Linux packages require [nfpm](https://nfpm.goreleaser.com/install/) to be installed. To build only the Linux packages without archives:
-
-```bash
-make packages VERSION=v1.0.0
-```
-
-Tagged `v*` pushes publish all artifacts — archives, packages, and checksums — as GitHub Releases.
+`make dist` builds tar.gz archives, `.deb` and `.rpm` packages for Linux (amd64, arm64), and a single SHA256 checksums file covering all artifacts to `dist/`. Linux packages require [nfpm](https://nfpm.goreleaser.com/install/) to be installed.
 
 ## Development
 
@@ -234,28 +178,11 @@ make test
 make build
 ```
 
-For contributor-oriented detail, see:
-- [Contributing](https://github.com/Barkway-app/keyseal/wiki/Contributing)
-- [Build and Release](https://github.com/Barkway-app/keyseal/wiki/Build-and-Release)
-- [Templates](https://github.com/Barkway-app/keyseal/wiki/Templates)
+Contributor-oriented detail is available in the [Contributing](https://github.com/jrpbuilds/keyseal/wiki/Contributing) wiki page.
 
-## CI
+## Origin
 
-GitHub Actions runs:
-- `gofmt -l` verification
-- `go test ./...`
-- `go build ./cmd/keyseal`
-- tagged `v*` release builds that publish tar.gz archives, `.deb` packages, `.rpm` packages, and checksums
-
-For repositories managed by Keyseal, use `keyseal verify` as the strict health gate in release and deploy workflows. Read-only deploy runners can run verification with only Keyseal, the encrypted repo, and the age private key material.
-
-## Built by Barkway
-
-Keyseal is built by the team at Barkway.
-
-We created it to solve a practical infrastructure problem in our own stack: managing encrypted secret files safely and predictably with SOPS-compatible encryption, age keys, and Git.
-
-Learn more about Barkway and our open-source work: https://www.barkway.app/open-source
+Keyseal was born out of a real production need: managing encrypted secret files safely and predictably with SOPS-compatible encryption, age keys, and Git. It is a small, focused tool for teams that want Git-backed secret workflows without the overhead of a hosted platform.
 
 ## Licensing
 

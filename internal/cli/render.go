@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Barkway-app/keyseal/internal/fsutil"
-	"github.com/Barkway-app/keyseal/internal/render"
+	"github.com/jrpbuilds/keyseal/internal/fsutil"
+	"github.com/jrpbuilds/keyseal/internal/render"
 	"github.com/spf13/cobra"
 )
 

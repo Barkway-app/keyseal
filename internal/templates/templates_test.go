@@ -3,7 +3,7 @@ package templates_test
 import (
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/templates"
+	"github.com/jrpbuilds/keyseal/internal/templates"
 )
 
 func TestBuildKnownTemplates(t *testing.T) {

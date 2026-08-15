@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/render"
-	"github.com/Barkway-app/keyseal/internal/schema"
+	"github.com/jrpbuilds/keyseal/internal/render"
+	"github.com/jrpbuilds/keyseal/internal/schema"
 )
 
 func TestMergeEnvDocsLaterFilesWin(t *testing.T) {

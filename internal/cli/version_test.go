@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/buildinfo"
+	"github.com/jrpbuilds/keyseal/internal/buildinfo"
 )
 
 func TestRootVersionFlag(t *testing.T) {

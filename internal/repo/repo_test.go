@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/repo"
+	"github.com/jrpbuilds/keyseal/internal/repo"
 )
 
 func TestLogicalNameToPath(t *testing.T) {

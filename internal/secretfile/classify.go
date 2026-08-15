@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Barkway-app/keyseal/internal/schema"
+	"github.com/jrpbuilds/keyseal/internal/schema"
 )
 
 // State describes the on-disk state of a Keyseal-managed secret file.

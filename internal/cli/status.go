@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Barkway-app/keyseal/internal/gitutil"
-	"github.com/Barkway-app/keyseal/internal/repo"
+	"github.com/jrpbuilds/keyseal/internal/gitutil"
+	"github.com/jrpbuilds/keyseal/internal/repo"
 	"github.com/spf13/cobra"
 )
 

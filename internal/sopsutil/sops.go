@@ -15,7 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Barkway-app/keyseal/internal/toolcheck"
+	"github.com/jrpbuilds/keyseal/internal/toolcheck"
 )
 
 // ageKeyEnvVar is the SOPS-supported environment variable for age identities.

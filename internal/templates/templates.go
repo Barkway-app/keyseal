@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/Barkway-app/keyseal/internal/schema"
+	"github.com/jrpbuilds/keyseal/internal/schema"
 )
 
 var supported = map[string]map[string]string{

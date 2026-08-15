@@ -9,6 +9,8 @@
 .cache/
 coverage.out
 *.test
+openspec/
+.opencode/
 
 # Editor and OS files
 .DS_Store

@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Barkway-app/keyseal/internal/config"
-	"github.com/Barkway-app/keyseal/internal/repo"
-	"github.com/Barkway-app/keyseal/internal/schema"
-	"github.com/Barkway-app/keyseal/internal/secretfile"
-	"github.com/Barkway-app/keyseal/internal/sopsutil"
-	"github.com/Barkway-app/keyseal/internal/templates"
+	"github.com/jrpbuilds/keyseal/internal/config"
+	"github.com/jrpbuilds/keyseal/internal/repo"
+	"github.com/jrpbuilds/keyseal/internal/schema"
+	"github.com/jrpbuilds/keyseal/internal/secretfile"
+	"github.com/jrpbuilds/keyseal/internal/sopsutil"
+	"github.com/jrpbuilds/keyseal/internal/templates"
 	"github.com/spf13/cobra"
 )
 

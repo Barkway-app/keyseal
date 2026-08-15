@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/Barkway-app/keyseal/internal/execenv"
-	"github.com/Barkway-app/keyseal/internal/render"
+	"github.com/jrpbuilds/keyseal/internal/execenv"
+	"github.com/jrpbuilds/keyseal/internal/render"
 	"github.com/spf13/cobra"
 )
 

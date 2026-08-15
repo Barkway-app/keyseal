@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/secretfile"
+	"github.com/jrpbuilds/keyseal/internal/secretfile"
 )
 
 func TestClassifyRecognizesStates(t *testing.T) {

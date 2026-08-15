@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/gitutil"
+	"github.com/jrpbuilds/keyseal/internal/gitutil"
 )
 
 func TestRepoRootDetectsRepository(t *testing.T) {

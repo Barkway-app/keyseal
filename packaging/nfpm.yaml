@@ -1,8 +1,8 @@
 name: keyseal
 arch: "__ARCH__"
 version: "__VERSION__"
-maintainer: "Barkway <open-source@barkway.app>"
-homepage: "https://github.com/Barkway-app/keyseal"
+maintainer: "jrp <jrp.public@proton.me>"
+homepage: "https://github.com/jrpbuilds/keyseal"
 license: "GPL-3.0-only"
 description: |
   keyseal is a CLI for managing encrypted secrets in Git repositories,

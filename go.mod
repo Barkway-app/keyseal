@@ -1,4 +1,4 @@
-module github.com/Barkway-app/keyseal
+module github.com/jrpbuilds/keyseal
 
 go 1.25.0
 

@@ -10,8 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Barkway-app/keyseal/internal/buildinfo"
-	"github.com/Barkway-app/keyseal/internal/config"
+	"github.com/jrpbuilds/keyseal/internal/buildinfo"
+	"github.com/jrpbuilds/keyseal/internal/config"
 	"github.com/spf13/cobra"
 )
 

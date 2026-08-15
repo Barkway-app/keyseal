@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Barkway-app/keyseal/internal/cli"
+	"github.com/jrpbuilds/keyseal/internal/cli"
 )
 
 func main() {

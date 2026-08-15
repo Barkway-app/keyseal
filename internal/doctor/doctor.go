@@ -6,14 +6,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Barkway-app/keyseal/internal/config"
-	"github.com/Barkway-app/keyseal/internal/fsutil"
-	"github.com/Barkway-app/keyseal/internal/repo"
-	"github.com/Barkway-app/keyseal/internal/schema"
-	"github.com/Barkway-app/keyseal/internal/secretfile"
-	"github.com/Barkway-app/keyseal/internal/sopsconfig"
-	"github.com/Barkway-app/keyseal/internal/sopsutil"
-	"github.com/Barkway-app/keyseal/internal/toolcheck"
+	"github.com/jrpbuilds/keyseal/internal/config"
+	"github.com/jrpbuilds/keyseal/internal/fsutil"
+	"github.com/jrpbuilds/keyseal/internal/repo"
+	"github.com/jrpbuilds/keyseal/internal/schema"
+	"github.com/jrpbuilds/keyseal/internal/secretfile"
+	"github.com/jrpbuilds/keyseal/internal/sopsconfig"
+	"github.com/jrpbuilds/keyseal/internal/sopsutil"
+	"github.com/jrpbuilds/keyseal/internal/toolcheck"
 )
 
 // Run executes the doctor checks for the current repository.

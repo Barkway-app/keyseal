@@ -1,6 +1,6 @@
 APP := keyseal
 BIN := ./bin/$(APP)
-BUILDINFO_PKG := github.com/Barkway-app/keyseal/internal/buildinfo
+BUILDINFO_PKG := github.com/jrpbuilds/keyseal/internal/buildinfo
 VERSION ?= $(shell git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo dev)
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo unknown)

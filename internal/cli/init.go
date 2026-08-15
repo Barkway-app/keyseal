@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Barkway-app/keyseal/internal/config"
+	"github.com/jrpbuilds/keyseal/internal/config"
 	"github.com/spf13/cobra"
 )
 

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/execenv"
+	"github.com/jrpbuilds/keyseal/internal/execenv"
 )
 
 func TestMergeEnvOverridesExistingValues(t *testing.T) {

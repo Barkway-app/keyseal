@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Barkway-app/keyseal/internal/gitutil"
+	"github.com/jrpbuilds/keyseal/internal/gitutil"
 	"github.com/spf13/cobra"
 )
 

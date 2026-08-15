@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/Barkway-app/keyseal/internal/buildinfo"
+	"github.com/jrpbuilds/keyseal/internal/buildinfo"
 	"github.com/spf13/cobra"
 )
 

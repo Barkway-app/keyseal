@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/config"
+	"github.com/jrpbuilds/keyseal/internal/config"
 )
 
 func TestLoadAppliesDefaults(t *testing.T) {

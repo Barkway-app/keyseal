@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Barkway-app/keyseal/internal/doctor"
+	"github.com/jrpbuilds/keyseal/internal/doctor"
 	"github.com/spf13/cobra"
 )
 

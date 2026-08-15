@@ -3,7 +3,7 @@ package schema_test
 import (
 	"testing"
 
-	"github.com/Barkway-app/keyseal/internal/schema"
+	"github.com/jrpbuilds/keyseal/internal/schema"
 )
 
 func TestValidateDocument(t *testing.T) {
