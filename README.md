@@ -5,7 +5,7 @@
 [![CI](https://github.com/jrpbuilds/keyseal/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jrpbuilds/keyseal/actions/workflows/ci.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/jrpbuilds/keyseal)](https://github.com/jrpbuilds/keyseal/releases)
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](./LICENSE)
-[![Go Version](https://img.shields.io/badge/go-1.25%2B-00ADD8)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/go-1.27%2B-00ADD8)](https://go.dev/)
 
 > **Default flow:** `keyseal add` scaffolds and encrypts a new secret document immediately, without writing plaintext starter content to the final `.enc.yaml` path.
 
@@ -39,7 +39,7 @@ SOPS already solves encryption and editing well. Keyseal stays one layer above t
 
 ## Requirements
 
-- Go 1.25+ to build the CLI
+- Go 1.27+ to build the CLI
 - age recipients configured in `.sops.yaml`
 
 Developer/admin machines that run `keyseal add`, `keyseal edit`, or `keyseal updatekeys` also need the external `sops` binary.

@@ -11,7 +11,7 @@ DIST_DIR := ./dist
 DIST_PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64
 PACKAGE_ARCHES := amd64 arm64
 
-.PHONY: build test fmt fmt-check check run tidy dist packages
+.PHONY: build test vet test-race vulncheck fmt fmt-check check run tidy dist packages
 
 build:
 	mkdir -p ./bin
@@ -19,6 +19,15 @@ build:
 
 test:
 	$(GO) test ./...
+
+vet:
+	$(GO) vet ./...
+
+test-race:
+	$(GO) test -race ./...
+
+vulncheck:
+	$(GO) run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 fmt:
 	gofmt -w cmd internal
@@ -28,7 +37,7 @@ fmt-check:
 	test -n "$$files"; \
 	test -z "$$(gofmt -l $$files)"
 
-check: fmt-check test build
+check: fmt-check vet test test-race vulncheck build
 
 run:
 	$(GO) run ./cmd/keyseal

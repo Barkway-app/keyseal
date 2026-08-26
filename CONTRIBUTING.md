@@ -5,8 +5,12 @@ Thanks for your interest in Keyseal.
 ## Development workflow
 
 Requirements:
-- Go 1.22+
+- Go 1.27+
 - `sops` installed locally if you want to exercise real edit/decrypt flows
+
+`make check` also runs `go test -race`, which needs a C toolchain (`gcc`); on
+systems without one, use `make fmt-check vet test build` or `make test` as the
+non-race fast path.
 
 Common commands:
 
