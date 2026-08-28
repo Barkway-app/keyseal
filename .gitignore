@@ -9,18 +9,17 @@
 .cache/
 coverage.out
 *.test
-openspec/
-.opencode/
 
 # Editor and OS files
 .DS_Store
 Thumbs.db
-.idea/
-.vscode/
 *.swp
 *.swo
 .codex
 .claude
+.vscode
+.opencode
+openspec/
 
 # Temp and local outputs
 tmp/

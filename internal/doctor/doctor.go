@@ -2,8 +2,10 @@ package doctor
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/jrpbuilds/keyseal/internal/config"
@@ -48,6 +50,7 @@ func Run(cwd string) (Result, error) {
 	repoRoot := cfg.RepoRoot(cwd)
 	repoRootReady := runRepositoryRootCheck(repoRoot, &result)
 	runOutputPathChecks(cfg, &result)
+	runProfileChecks(cfg, cwd, &result)
 	runRepoArtifactChecks(repoRoot, &result)
 
 	if !repoRootReady {
@@ -88,7 +91,11 @@ func runConfigChecks(cwd string, result *Result) (config.Config, bool) {
 		return config.Config{}, false
 	}
 
-	cfg, err := config.Load(cfgPath)
+	// Doctor loads the config leniently so malformed profile definitions are
+	// reported as granular per-render checks (runProfileChecks) instead of
+	// aborting the whole report on the first ValidateProfiles error. All
+	// non-profile validation still gates the repository-backed checks here.
+	cfg, err := config.LoadLenient(cfgPath)
 	if err != nil {
 		result.Add(CheckResult{
 			Name:     "keyseal.yaml",
@@ -257,6 +264,128 @@ func runOutputPathChecks(cfg config.Config, result *Result) {
 		Details:     pathDetails,
 		Remediation: dedupeStrings(pathFixes),
 	})
+}
+
+// runProfileChecks reports configuration and input-resolvability problems for
+// every configured profile render as discrete aggregated checks, so users can
+// fix everything in one pass.
+//
+// Inputs are classified by existence only — doctor never decrypts or reads
+// secret content during these checks — so the reporting stays secret-safe.
+func runProfileChecks(cfg config.Config, cwd string, result *Result) {
+	repoRoot := cfg.RepoRoot(cwd)
+	for _, profileName := range slices.Sorted(maps.Keys(cfg.Profiles)) {
+		profile := cfg.Profiles[profileName]
+		if len(profile.Renders) == 0 {
+			continue
+		}
+
+		seenOut := map[string]string{}
+		duplicateDetails := []string{}
+		for idx, renderProfile := range profile.Renders {
+			renderLabel := renderProfile.Name
+			if strings.TrimSpace(renderLabel) == "" {
+				renderLabel = fmt.Sprintf("renders[%d]", idx)
+			}
+
+			var details []string
+			if len(renderProfile.Inputs) == 0 {
+				details = append(details, "inputs is empty; list at least one logical secret name")
+			}
+			resolvable := make([]string, 0, len(renderProfile.Inputs))
+			for _, input := range renderProfile.Inputs {
+				if err := repo.ValidateLogicalName(input); err != nil {
+					details = append(details, fmt.Sprintf("input %q is not a valid logical name: %v", input, err))
+					continue
+				}
+				resolvable = append(resolvable, input)
+			}
+			format := renderProfile.Format
+			if format == "" {
+				format = cfg.Defaults.OutputFormat
+			}
+			if !config.AllowedOutputFormat(format) {
+				details = append(details, fmt.Sprintf("format %q is not one of dotenv, json, yaml", renderProfile.Format))
+			}
+			mode := renderProfile.Mode
+			if mode == "" {
+				mode = cfg.Defaults.FileMode
+			}
+			if _, err := fsutil.ParseFileMode(mode); err != nil {
+				details = append(details, fmt.Sprintf("mode %q is invalid: %v", renderProfile.Mode, err))
+			}
+			if strings.TrimSpace(renderProfile.Out) == "" {
+				details = append(details, "out is required")
+			}
+			for _, input := range resolvable {
+				path, err := repo.LogicalNameToPath(repoRoot, input, cfg.Repository.EncryptedExtension)
+				if err != nil {
+					details = append(details, fmt.Sprintf("input %q could not be mapped to a path: %v", input, err))
+					continue
+				}
+				classified, err := secretfile.Classify(path)
+				if err != nil {
+					details = append(details, fmt.Sprintf("input %q could not be inspected: %v", input, err))
+					continue
+				}
+				if classified.State == secretfile.StateMissing {
+					details = append(details, fmt.Sprintf("input %q is missing at %s", input, filepath.ToSlash(path)))
+				}
+			}
+
+			checkName := fmt.Sprintf("profile %q render %q", profileName, renderLabel)
+			if len(details) > 0 {
+				result.Add(CheckResult{
+					Name:     checkName,
+					Status:   StatusFail,
+					Severity: SeverityError,
+					Summary:  fmt.Sprintf("profiles.%s.renders[%d] (%s) has invalid configuration or missing inputs", profileName, idx, renderProfile.Name),
+					Details:  details,
+					Remediation: []string{
+						fmt.Sprintf("Fix profiles.%s.renders[%d] in keyseal.yaml, then rerun `keyseal doctor`.", profileName, idx),
+					},
+				})
+			} else {
+				result.Add(CheckResult{
+					Name:     checkName,
+					Status:   StatusOK,
+					Severity: SeverityInformational,
+					Summary:  "Render definition is well-formed and its inputs resolve",
+				})
+			}
+
+			// Track normalized output paths to surface duplicate destinations
+			// once per profile after the render loop.
+			if renderProfile.Out != "" {
+				cleanOut := filepath.Clean(renderProfile.Out)
+				if first, ok := seenOut[cleanOut]; ok {
+					duplicateDetails = append(duplicateDetails, fmt.Sprintf("renders %q and %q both write output %q", first, renderLabel, renderProfile.Out))
+				} else {
+					seenOut[cleanOut] = renderLabel
+				}
+			}
+		}
+
+		duplicateCheck := CheckResult{
+			Name:     fmt.Sprintf("profile %q duplicate output", profileName),
+			Status:   StatusOK,
+			Severity: SeverityInformational,
+			Summary:  "Renders write distinct output paths",
+		}
+		if len(duplicateDetails) > 0 {
+			duplicateCheck = CheckResult{
+				Name:     fmt.Sprintf("profile %q duplicate output", profileName),
+				Status:   StatusFail,
+				Severity: SeverityError,
+				Summary:  "Multiple renders in this profile write the same output path",
+				Details:  duplicateDetails,
+				Remediation: []string{
+					fmt.Sprintf("Give each render in profiles.%s a unique out path in keyseal.yaml.", profileName),
+				},
+			}
+		}
+		result.Add(duplicateCheck)
+	}
 }
 
 func runSOPSConfigChecks(cwd string, result *Result) {

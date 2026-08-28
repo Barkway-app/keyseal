@@ -4,10 +4,15 @@ package config
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
+
+	"github.com/jrpbuilds/keyseal/internal/fsutil"
+	"github.com/jrpbuilds/keyseal/internal/repo"
 )
 
 const (
@@ -121,8 +126,35 @@ func Default() Config {
 }
 
 // Load reads keyseal.yaml, applies defaults for omitted optional fields, and
-// validates the final configuration.
+// validates the final configuration, including profile render definitions.
 func Load(path string) (Config, error) {
+	cfg, err := load(path)
+	if err != nil {
+		return Config{}, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
+}
+
+// LoadLenient behaves like Load but skips profile-definition validation so
+// diagnostics such as doctor can enumerate individual profile problems as
+// granular checks instead of failing on the first malformed render. Every
+// other validation rule still applies.
+func LoadLenient(path string) (Config, error) {
+	cfg, err := load(path)
+	if err != nil {
+		return Config{}, err
+	}
+	if err := cfg.validateBase(); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
+}
+
+// load parses keyseal.yaml and applies defaults without validating.
+func load(path string) (Config, error) {
 	cfg := Default()
 
 	data, err := os.ReadFile(path)
@@ -135,9 +167,6 @@ func Load(path string) (Config, error) {
 	}
 
 	cfg.applyDefaults()
-	if err := cfg.Validate(); err != nil {
-		return Config{}, err
-	}
 	return cfg, nil
 }
 
@@ -182,8 +211,17 @@ func (c *Config) applyDefaults() {
 	}
 }
 
-// Validate checks the semantic constraints of a loaded config file.
+// Validate checks the semantic constraints of a loaded config file, including
+// every profile render definition.
 func (c Config) Validate() error {
+	if err := c.validateBase(); err != nil {
+		return err
+	}
+	return c.ValidateProfiles()
+}
+
+// validateBase checks the non-profile semantic constraints of a loaded config.
+func (c Config) validateBase() error {
 	if c.Version != SupportedConfigVersion {
 		return fmt.Errorf("unsupported config version %d", c.Version)
 	}
@@ -212,6 +250,65 @@ func (c Config) Validate() error {
 		return fmt.Errorf("validation.key_pattern: %w", err)
 	}
 	return nil
+}
+
+// ValidateProfiles checks every profile render definition and fails fast on
+// the first violation, naming the profile plus the render index/name so the
+// offending YAML block is easy to find.
+//
+// Empty `format`/`mode` fields fall back to `Defaults` before validation, but
+// the fallback is computed locally and never written back to the struct so
+// validation stays read-only. Only mode *parseability* is enforced here; mode
+// *safety* (owner-only) stays a render-time concern, matching explicit render.
+func (c *Config) ValidateProfiles() error {
+	for _, profileName := range slices.Sorted(maps.Keys(c.Profiles)) {
+		profile := c.Profiles[profileName]
+		seenOut := make(map[string]int, len(profile.Renders))
+		for idx, r := range profile.Renders {
+			label := fmt.Sprintf("profiles.%s.renders[%d] (%q)", profileName, idx, r.Name)
+			if strings.TrimSpace(r.Name) == "" {
+				return fmt.Errorf("%s: render name is required", label)
+			}
+			if len(r.Inputs) == 0 {
+				return fmt.Errorf("%s: inputs must list at least one logical secret name", label)
+			}
+			for _, input := range r.Inputs {
+				if err := repo.ValidateLogicalName(input); err != nil {
+					return fmt.Errorf("%s: %w", label, err)
+				}
+			}
+			format := r.Format
+			if format == "" {
+				format = c.Defaults.OutputFormat
+			}
+			if _, ok := allowedOutputFormats[format]; !ok {
+				return fmt.Errorf("%s: unknown format %q (must be one of dotenv, json, yaml)", label, r.Format)
+			}
+			mode := r.Mode
+			if mode == "" {
+				mode = c.Defaults.FileMode
+			}
+			if _, err := fsutil.ParseFileMode(mode); err != nil {
+				return fmt.Errorf("%s: invalid mode %q: %w", label, r.Mode, err)
+			}
+			if strings.TrimSpace(r.Out) == "" {
+				return fmt.Errorf("%s: out is required", label)
+			}
+			cleanOut := filepath.Clean(r.Out)
+			if first, ok := seenOut[cleanOut]; ok {
+				return fmt.Errorf("profiles.%s: renders[%d] and renders[%d] both write output %q; out values must be unique within a profile", profileName, first, idx, r.Out)
+			}
+			seenOut[cleanOut] = idx
+		}
+	}
+	return nil
+}
+
+// AllowedOutputFormat reports whether the given render format is one of the
+// supported output formats shared by explicit render, profiles, and doctor.
+func AllowedOutputFormat(format string) bool {
+	_, ok := allowedOutputFormats[format]
+	return ok
 }
 
 // RepoRoot resolves the repository root relative to the current working tree.
