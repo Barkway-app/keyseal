@@ -1,4 +1,4 @@
-![Keyseal logo](https://github.com/jrpbuilds/keyseal/wiki/keyseal-logo.png)
+![Keyseal logo](https://github.com/jrpbuilds/keyseal/wiki/keyseal-logo.webp)
 
 # Keyseal
 
