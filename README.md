@@ -1,4 +1,6 @@
-![Keyseal logo](https://github.com/jrpbuilds/keyseal/wiki/keyseal-logo.webp)
+<p align="center">
+  <img src="https://github.com/jrpbuilds/keyseal/wiki/keyseal-logo.webp" alt="Keyseal logo" width="320">
+</p>
 
 # Keyseal
 
