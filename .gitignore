@@ -17,8 +17,9 @@ Thumbs.db
 *.swo
 .codex
 .claude
-.vscode
-.opencode
+.idea/
+.vscode/
+.opencode/
 openspec/
 
 # Temp and local outputs

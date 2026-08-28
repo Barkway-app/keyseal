@@ -4,6 +4,14 @@ All notable changes to Keyseal will be documented in this file.
 
 The format is intentionally lightweight and optimized for public release tags.
 
+## v1.2.0 (unreleased)
+
+Highlights:
+- `keyseal render --profile <name>` executes every render defined by a profile in `keyseal.yaml`, resolving, decrypting, and pre-flighting all outputs before any write
+- `--dry-run` with `--profile` validates the full plan and prints it without writing; it decrypts to fully validate inputs but never exposes values
+- profile definitions are validated at config load: empty inputs, unknown formats, invalid modes, and duplicate output paths within a profile are all rejected
+- `keyseal doctor` and `keyseal verify` now report per-profile configuration and input-resolvability problems as discrete checks
+
 ## v1.1.0
 
 Highlights:

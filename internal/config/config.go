@@ -240,7 +240,7 @@ func (c Config) validateBase() error {
 	if _, ok := allowedOutputFormats[c.Defaults.OutputFormat]; !ok {
 		return fmt.Errorf("defaults.output_format must be one of dotenv, json, yaml")
 	}
-	if _, err := parseFileMode(c.Defaults.FileMode); err != nil {
+	if _, err := fsutil.ParseFileMode(c.Defaults.FileMode); err != nil {
 		return fmt.Errorf("defaults.file_mode: %w", err)
 	}
 	if c.Validation.KeyPattern == "" {

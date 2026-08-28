@@ -134,6 +134,8 @@ keyseal status production/platform/app
 keyseal history production/platform/app --oneline
 keyseal commit -m "Update production app secret"
 keyseal render production/platform/app --stdout --format json
+keyseal render --profile production
+keyseal render --profile production --dry-run
 keyseal exec production/platform/app -- php artisan migrate
 keyseal rollback production/platform/app --to <commit> --dry-run
 keyseal doctor
@@ -150,6 +152,8 @@ Key workflow details:
 - `updatekeys` uses `.sops.yaml` as the recipient source of truth and does not rotate secret values or data encryption keys
 - `keyseal commit` stages only Keyseal-managed files, not the whole repo
 - `rollback` restores the encrypted file from Git history; `--dry-run` previews safely
+- `profiles` in `keyseal.yaml` group render definitions; all profiles are validated on every config load, so a malformed profile blocks any command until fixed
+- `render --profile --dry-run` decrypts and fully validates inputs (age key material required) but writes nothing and prints only the plan
 
 For exact command behavior and more examples, see the [Command Reference](https://github.com/jrpbuilds/keyseal/wiki/Command-Reference), [Configuration Reference](https://github.com/jrpbuilds/keyseal/wiki/Configuration-Reference), and [Troubleshooting](https://github.com/jrpbuilds/keyseal/wiki/Troubleshooting) wiki pages.
 
